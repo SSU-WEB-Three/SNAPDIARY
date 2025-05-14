@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/sidebar.js" defer></script>
+</head>
+<body>
+  <!-- 토글 버튼 -->
+  <button id="toggle-btn" class="toggle-btn">☰</button>
+
+  <!-- 사이드바 포함 -->
+  <%- include('../partials/sidebar') %>
+
+  <!-- 메인 콘텐츠 -->
+  <main class="content">
+    <%- body %>
+  </main>
+</body>
+</html>
