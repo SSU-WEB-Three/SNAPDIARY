@@ -12,15 +12,13 @@
         <div class="left-block">
             <div class="large-card" id="interactive-card">
                 <div class="card-header"></div>
-                 <!-- 챗봇 기능 추가 예정 하루 동안 입출력 보여짐, 스크롤 가능 새로 고침 시 출력-->
-                <p>안녕하세요. 오늘 하루 어떠신가요?</p>
-
+                <!-- 기록과 입력 출력 영역 -->
+                <div class="log-container" id="log-container"></div>
             </div>
             <!-- 검색 영역 -->
             <div class="search-bar">
-                 <!-- 사용자 입력시 챗봇 로그에 전송 -->
-                <input type="text" placeholder="사용자 입력" id="search-input">
-                <button class="search-btn">🔍</button>
+                <input type="text" placeholder="오늘의 기록을 남겨보세요" id="search-input">
+                <button class="search-btn" id="search-btn">🔍</button>
             </div>
         </div>
 
@@ -38,6 +36,204 @@
             </div>
         </div>
     </div>
-    <script src="./js/indexscript.js"></script>
+
+    <!-- 클라이언트 사이드 스크립트 -->
+    <script>
+// 랜덤 문구 리스트
+const greetings = [
+    "안녕하세요. 오늘 하루 어떠신가요? 오늘도 활기차게 시작해보세요!",
+    "오늘도 활기차게 시작해볼까요? 어떤 일이든 차분하게 해나가면 잘 될 거예요!",
+    "무슨 일이든 잘 풀리길 바랄게요! 오늘은 어제보다 더 나은 하루가 될 거예요!",
+    "하루의 시작을 기분 좋게 만들어 봅시다! 작은 변화도 나를 성장시킵니다.",
+    "기분 좋은 하루가 되길 바랍니다! 오늘 하루도 당신의 이야기를 들려주세요.",
+    "어떤 일이든 차분하게 해나가면 잘 될 거예요! 작은 성취도 소중하게 여겨보세요.",
+    "오늘 하루도 화이팅! 지치더라도 잠깐 쉬어가도 괜찮아요.",
+    "좋은 일이 가득한 하루 보내세요! 가끔은 계획하지 않은 일이 더 특별하답니다.",
+    "오늘은 무엇을 해볼까요? 새로운 도전을 향해 한 걸음 더 나아가봐요.",
+    "기분 좋은 생각으로 시작해봐요! 긍정적인 마음이 하루를 바꿀 수 있습니다.",
+    "매일 똑같은 하루라도 오늘은 특별할 거예요! 어제와 다른 무언가를 찾아봐요.",
+    "오늘 하루 중 가장 기억에 남는 순간은 무엇인가요? 소소한 일도 기억해볼까요?",
+    "조금 힘들었던 순간도 있었나요? 그래도 끝까지 해낸 당신이 대단합니다.",
+    "어제와 다른 오늘의 특별함을 찾아보세요! 사소한 변화도 소중히 여겨보세요.",
+    "오늘도 기록을 통해 나를 돌아보세요. 작은 순간들이 모여 특별한 하루가 됩니다.",
+    "크고 대단한 일이 아니어도 좋아요. 오늘 당신이 해낸 작은 성취를 기억해봐요.",
+    "매일 새로운 하루가 찾아옵니다. 오늘도 나만의 속도로 나아가면 충분해요.",
+    "오늘의 감정을 솔직하게 남겨보세요. 그 감정도 오늘의 소중한 일부랍니다.",
+    "기억하기 귀찮다면 지금 간단하게 한 줄로 남겨보세요. 짧아도 당신만의 이야기예요.",
+    "어제와 달랐던 순간을 한 줄로 남겨볼까요? 평범해 보이지만 특별한 기록이 될 거예요."
+];
+
+
+// 랜덤 인덱스 선택 함수
+function getRandomGreeting() {
+    const index = Math.floor(Math.random() * greetings.length);
+    return greetings[index];
+}
+
+// 페이지 로드 시 greeting-text 먼저 출력
+document.addEventListener("DOMContentLoaded", () => {
+    const randomMessage = getRandomGreeting();
+    addLog(randomMessage, "left");
+});
+
+// 필터링 단어 목록 (비속어, 욕설 등)
+const prohibitedWords = [
+    // 일반 욕설
+    "씨발", "시발", "ㅅㅂ", "ㅆㅂ", "ㅆ발", "ㅅ발", "ㅅㅣ발", "ㅆㅣ발", 
+    "개새끼", "개새", "개색기", "개색끼", "개색히", "개쉑", "개자식", 
+    "썅", "쌍년", "쌍놈", "엠창", "염병", "엠병", "좆", "좃", "존나", 
+    "존1나", "존ㄴ나", "조낸", "족같다", "좆같다", "꼴값", "꼴깝", 
+    "닥쳐", "닥치라", "닥치고", "닥치세", "닥치세요", "꺼져", "꺼지세요", 
+    "뒤져", "디져", "죽어", "죽어라", "죽으라", "죽을래", "뒤질래", 
+    "쳐죽일", "쳐맞을", "쳐먹을", "쳐죽여", "쳐뭉개", "좆까", "좆밥", 
+
+    // 비하 및 차별 표현
+    "병신", "븅신", "빙신", "정신병자", "지잡대", "노가다", "노예", 
+    "호구", "찌질", "찐따", "장애인", "장애자", "저능아", "백치", 
+    "홍어", "꼽추", "늬기미", "늬미", 
+
+    // 외래어/알파벳 비속어
+    "fuck", "fxxk", "fxxxk", "fxxxking", "fcuk", "fk", "shit", 
+    "bitch", "asshole", "bastard", "idiot", "moron", "wtf", "damn", 
+    "stfu", "fck", "fking", "fcking", "dick", "pussy", 
+
+    "꼴통", "또라이", "도라이", "정신병", "미친놈", "미친년", 
+    "개같다", "개같이", "개판", "미친", "버러지", "벌레", 
+    "쓰레기", "잡놈", "잡년", "호구", "왕따", "바보", "멍청이", 
+    "고자", "개돼지", "무뇌", "저능", "거지", "쓰레기"
+];
+
+// 최소 입력 길이 설정
+const MIN_INPUT_LENGTH = 10;
+
+// 입력 검증 함수
+function isInputValid(text) {
+    // 공백 제거 및 소문자로 변환
+    const cleanedText = text.trim().toLowerCase();
+
+    // 짧은 글자 필터링
+    if (cleanedText.length < MIN_INPUT_LENGTH) {
+        alert(`입력한 문장이 너무 짧습니다. 최소 ${MIN_INPUT_LENGTH}자 이상 입력해주세요.`);
+        return false;
+    }
+
+    // 필터링 단어가 포함되어 있는지 확인
+    for (const word of prohibitedWords) {
+        if (cleanedText.includes(word)) {
+            alert("부적절한 표현이 포함되어 있습니다. 다시 입력해주세요.");
+            return false;
+        }
+    }
+    return true;
+}
+
+// 입력 검증 함수
+function isInputValid(text) {
+    // 공백 제거 및 소문자로 변환
+    const cleanedText = text.trim().toLowerCase();
+
+    // 필터링 단어가 포함되어 있는지 확인
+    for (const word of prohibitedWords) {
+        if (cleanedText.includes(word)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// 사용자 입력 처리 (버튼 클릭 또는 엔터 키)
+document.getElementById("search-btn").addEventListener("click", handleUserInput);
+document.getElementById("search-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+        handleUserInput();
+        event.preventDefault();
+    }
+});
+
+// 시간 포맷 함수 (HH:mm)
+function getCurrentTime() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
+
+// 사용자 입력 처리 함수
+function handleUserInput() {
+    const userInput = document.getElementById("search-input").value;
+
+    // 입력 길이 검증
+    if (userInput.length < MIN_INPUT_LENGTH) {
+        alert(`입력한 문장이 너무 짧습니다. 최소 ${MIN_INPUT_LENGTH}자 이상 입력해주세요.`);
+        document.getElementById("search-input").value = "";
+        return;
+    }
+
+    // 욕설 검증
+    if (!isInputValid(userInput)) {
+        alert("부적절한 표현이 포함되어 있습니다. 다시 입력해주세요.");
+        document.getElementById("search-input").value = "";
+        return;
+    }
+
+    if (userInput.trim()) {
+        // 사용자 입력을 먼저 대화창에 추가
+        addLog(userInput, "right");      
+        // 새로운 랜덤 문구를 바로 대화창에 추가
+        const randomMessage = getRandomGreeting();
+        addLog(randomMessage, "left");
+
+        // 입력 필드 초기화
+        document.getElementById("search-input").value = "";
+    }
+}
+
+// 입력된 내용을 카드에 추가하는 함수
+function addLog(text, position) {
+    const logContainer = document.getElementById("log-container");
+    const logItem = document.createElement("div");
+    logItem.className = `log-item ${position}`;
+
+    // 텍스트와 시간 표시
+    const messageText = document.createElement("p");
+    messageText.innerText = text;
+
+    const timestamp = document.createElement("span");
+    timestamp.className = `timestamp ${position}`;
+    timestamp.innerText = getCurrentTime();
+
+    logItem.appendChild(messageText);
+    logItem.appendChild(timestamp);
+
+    logContainer.appendChild(logItem);
+
+    // 자동 스크롤 아래로
+    logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+
+// 명언 API 호출 함수
+async function fetchQuote() {
+    try {
+        const response = await fetch("https://korean-advice-open-api.vercel.app/api/advice");
+        if (!response.ok) throw new Error("명언을 불러오는 데 실패했습니다.");
+
+        const data = await response.json();
+        const { author, authorProfile, message } = data;
+
+        // 명언 카드 업데이트
+        document.getElementById("quote-text").innerText = `"${message}"`;
+        document.getElementById("quote-author").innerText = `- ${author} (${authorProfile})`;
+    } catch (error) {
+        console.error("명언 가져오기 오류:", error);
+        document.getElementById("quote-text").innerText = "명언을 불러오는 중 오류 발생.";
+        document.getElementById("quote-author").innerText = "";
+    }
+}
+
+// 페이지 로드 시 명언 불러오기
+document.addEventListener("DOMContentLoaded", fetchQuote);
+
+</script>
 </body>
 </html>

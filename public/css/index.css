@@ -95,3 +95,58 @@ body, html {
 .search-btn:hover {
     background-color: #524cb8;
 }
+
+.log-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px; /* 대화 간 최소 간격 */
+    padding: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.log-item {
+    max-width: 80%; /* 대화 폭 줄여 자연스러움 */
+    padding: 8px 12px;
+    border-radius: 15px;
+    margin: 1px 0; /* 대화 간 최소 간격 */
+    word-wrap: break-word;
+}
+
+.log-item.left {
+    align-self: flex-start;
+    background-color: #e0e0e0;
+    margin-right: 0; /* 왼쪽 대화 여백 제거 */
+}
+
+.log-item.right {
+    align-self: flex-end;
+    background-color: #6c63ff;
+    color: white;
+    margin-left: 0; /* 오른쪽 대화 여백 제거 */
+}
+
+
+/* 스크롤 스타일 */
+.log-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 10px;
+}
+
+.log-container::-webkit-scrollbar-thumb:hover {
+    background-color: #555;
+}
+
+.timestamp {
+    font-size: 12px;
+    color: black;
+    margin-top: 4px;
+}
+
+.timestamp.right {
+    text-align: right;
+}
