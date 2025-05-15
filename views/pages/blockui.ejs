@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>칠교놀이 UI</title>
+  <link rel="stylesheet" href="./css/blockstyle.css">
+</head>
+<body>
+  <div class="container">
+    
+    <div class="floating-buttons">
+      <button onclick="addShape('triangle large')">큰 삼각형</button>
+      <button onclick="addShape('triangle small')">작은 삼각형</button>
+      <button onclick="addShape('square')">정사각형</button>
+      <button onclick="addShape('parallelogram')">평행사변형</button>
+    </div>
+    <div class="main">
+      <div class="header">블록 배치하기</div>
+      <div class="canvas">
+        
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function addShape(type) {
+      const canvas = document.querySelector('.canvas');
+      const newBlock = document.createElement('div');
+
+      newBlock.className = `block ${type}`;
+      newBlock.style.left = '100px';
+      newBlock.style.top = '100px';
+      newBlock.style.transform = '';
+
+      makeDraggableAndRotatalbe(newBlock);
+      canvas.appendChild(newBlock);
+    }
+
+    document.querySelectorAll('.block').forEach(makeDraggableAndRotatalbe);
+
+    function makeDraggableAndRotatalbe(block) {
+      let angle = 0;
+      let dragged = false;
+
+      // 회전 기능
+      block.addEventListener('click', (e) => {
+        if (dragged) return;
+        angle = (angle + 45) % 360;
+        block.style.transform = `rotate(${angle}deg)`;
+        if (block.classList.contains('parallelogram')) {
+          block.style.transform += ' skew(-30deg)';
+        }
+      });
+
+      // 드래그 기능
+      block.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const shiftX = e.clientX - block.offsetLeft;
+        const shiftY = e.clientY - block.offsetTop;
+        dragged = false;
+
+        function onMouseMove(e) {
+          block.style.left = e.clientX - shiftX + 'px';
+          block.style.top = e.clientY - shiftY + 'px';
+          dragged = true;
+        }
+
+        function onMouseUp() {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+
+      block.ondragstart = () => false;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+* {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+
+    body {
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      height: 50px;
+      background-color: #ddd;
+      display: flex;
+      align-items: center;
+      padding-left: 20px;
+      font-weight: bold;
+      color: #444;
+    }
+
+    .canvas {
+      flex: 1;
+      position: relative;
+      background-image: linear-gradient(#e0e0e0 1px, transparent 1px),
+                        linear-gradient(90deg, #e0e0e0 1px, transparent 1px);
+      background-size: 40px 40px;
+      background-color: white;
+    }
+
+    /* 블록 스타일 */
+    .block {
+      position: absolute;
+      opacity: 0.9;
+      cursor: pointer;
+      transform-origin: center;
+    }
+
+    .triangle.large {
+      width: 160px;
+      height: 160px;
+      background-color: #6c5ce7;
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+      top: 60px;
+      left: 240px;
+    }
+
+    .triangle.small {
+      width: 80px;
+      height: 80px;
+      background-color: #fd79a8;
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+      top: 260px;
+      left: 240px;
+    }
+
+    .square {
+      width: 80px;
+      height: 80px;
+      background-color: #00b894;
+      top: 60px;
+      left: 440px;
+    }
+
+    .parallelogram {
+      width: 160px;
+      height: 80px;
+      background-color: #0984e3;
+      transform: skew(-45deg);
+      top: 160px;
+      left: 440px;
+    }
+
+    .floating-buttons {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .floating-buttons button {
+      padding: 10px;
+      background-color: #6c5ce7;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+  .floating-buttons button:hover {
+     background-color: #4b3cb8;
+  }
