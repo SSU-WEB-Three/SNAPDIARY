@@ -30,6 +30,12 @@ app.get('/', (req, res) => {
     res.render('pages/index', { title: '메인 화면' });
 });
 
+
+app.get('/blockui', (req, res) => {
+    res.render('pages/blockui', { title: '블록 페이지' });
+});
+
+
 // 서버 시작
 app.listen(PORT, () => {
     console.log(`✅ Server running at http://localhost:${PORT}`);
