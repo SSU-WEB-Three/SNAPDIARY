@@ -89,6 +89,7 @@ body, html {
 }
 
 .login-btn, .signup-btn {
+  text-decoration: none;
   padding: 8px 16px;
   background-color: #6c63ff;
   color: white;

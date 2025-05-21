@@ -77,6 +77,30 @@
 
       block.ondragstart = () => false;
     }
+
+      //{   DB에 저장하게 될 요소들
+        //"page_id": "664b4ff945e10a0012ab3456", 어떤 날짜의 기록페이지인지 기억해야함.
+        //"shape_type": "triangle large",   도형의 정보 (큰/작은 삼각형, 정사각형, 평행사변형)
+        //"position": { "x": 120, "y": 200 },  도형의 배치 위치 
+        //"rotation": 45,   회전 정보
+        //"created_at": "2025-05-20T14:05:00.123Z" 해당 도형이 배치된 시각
+      //}
+
+    // DB에 저장할 요소들 추출하는 과정
+    function extractBlockData() {
+      const blocks = document.querySelectorAll('.block');
+      const blockDataList = [];
+
+      // 블록 개별 작업 선언
+      blocks.forEach((block) => {
+        const style = window.getComputedStyle(block);
+        const transform = style.transform;
+        let rotation = 0;
+        
+
+      });
+    }
   </script>
 </body>
 </html>
+
