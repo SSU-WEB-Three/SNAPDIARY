@@ -35,6 +35,10 @@ app.get('/blockui', (req, res) => {
     res.render('pages/blockui', { title: '블록 페이지' });
 });
 
+app.get('/mypage', (req, res) => {
+    res.render('pages/mypage', { title: '마이 페이지' });
+});
+
 
 // 서버 시작
 app.listen(PORT, () => {
