@@ -35,6 +35,26 @@ app.get('/blockui', (req, res) => {
     res.render('pages/blockui', { title: '블록 페이지' });
 });
 
+app.get('/login', (req, res) => {
+    res.render('pages/login', { layout: false });
+});
+
+app.get('/register', (req, res) => {
+    res.render('pages/register', { layout: false });
+});
+
+app.get('/register/success', (req, res) => {
+    res.render('pages/register-success', { layout: false });
+});
+
+app.post('/register', (req, res) => {
+    res.redirect('/register/success');
+});
+
+app.post('/login', (req, res) => {
+    res.redirect('/');
+});
+
 
 // 서버 시작
 app.listen(PORT, () => {
