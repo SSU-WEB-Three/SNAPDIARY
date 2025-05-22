@@ -23,6 +23,7 @@
       margin-bottom: 16px;
       box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
       position: relative;
+      cursor: pointer;
     }
     .diary-date {
       font-weight: bold;
@@ -81,9 +82,7 @@
 
       <!-- 오른쪽 카드 및 잔디 영역 -->
       <div class="col-md-8">
-        <!-- GitHub 스타일 잔디 -->
         <div id="grassChart" class="grass-chart"></div>
-        <!-- 카드 목록 -->
         <div id="cardContainer"></div>
       </div>
     </div>
@@ -111,6 +110,26 @@
     </div>
   </div>
 
+  <!-- 조회 모달 -->
+  <div class="modal fade" id="viewModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">일기 보기</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="viewDate" class="fw-bold mb-2"></div>
+          <div id="viewContent" class="mb-3"></div>
+          <div id="viewViews" class="text-muted small"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     let diaryData = {};
@@ -119,21 +138,14 @@
     const cardContainer = document.getElementById("cardContainer");
     const writeBtn = document.getElementById("writeBtn");
     const entryModal = new bootstrap.Modal(document.getElementById("entryModal"));
+    const viewModal = new bootstrap.Modal(document.getElementById("viewModal"));
     const entryForm = document.getElementById("entryForm");
     const entryText = document.getElementById("entryText");
     const editIndex = document.getElementById("editIndex");
     const grassChart = document.getElementById("grassChart");
-
-    function saveToLocalStorage() {
-      localStorage.setItem("diaryData", JSON.stringify(diaryData));
-    }
-
-    function loadFromLocalStorage() {
-      const stored = localStorage.getItem("diaryData");
-      if (stored) {
-        diaryData = JSON.parse(stored);
-      }
-    }
+    const viewDate = document.getElementById("viewDate");
+    const viewContent = document.getElementById("viewContent");
+    const viewViews = document.getElementById("viewViews");
 
     function renderCards(dateStr, entries = diaryData[dateStr]) {
       cardContainer.innerHTML = "";
@@ -146,14 +158,23 @@
         card.className = "diary-card border-bottom-divider";
         card.innerHTML = `
           <div class="card-actions">
-            <button class="btn-icon text-primary" onclick="editEntry('${dateStr}', ${index})">✏️</button>
-            <button class="btn-icon text-danger" onclick="deleteEntry('${dateStr}', ${index})">🗑️</button>
+            <button class="btn-icon text-primary" onclick="editEntry('${dateStr}', ${index}); event.stopPropagation();">✏️</button>
+            <button class="btn-icon text-danger" onclick="deleteEntry('${dateStr}', ${index}); event.stopPropagation();">🗑️</button>
           </div>
           <div class="diary-date">${dateStr}</div>
           <div class="diary-views">조회수 : ${entry.views}</div>
           <hr />
           <div>${entry.title}</div>
         `;
+        card.addEventListener("click", () => {
+          entry.views += 1;
+          viewDate.textContent = `📅 날짜: ${dateStr}`;
+          viewContent.textContent = entry.title;
+          viewViews.textContent = `👀 조회수: ${entry.views}`;
+          viewModal.show();
+          renderCards(dateStr, entries);
+          renderGrassChart();
+        }, { once: true });
         cardContainer.appendChild(card);
       });
     }
@@ -163,7 +184,6 @@
       const year = new Date(datePicker.value).getFullYear();
       const startDate = new Date(`${year}-01-01`);
       const endDate = new Date(`${year}-12-31`);
-
       let currentDate = new Date(startDate);
 
       while (currentDate <= endDate) {
@@ -201,7 +221,6 @@
     window.deleteEntry = function(dateStr, index) {
       if (confirm("이 일기를 삭제할까요?")) {
         diaryData[dateStr].splice(index, 1);
-        saveToLocalStorage();
         updateAllViews();
       }
     };
@@ -217,17 +236,14 @@
       const text = entryText.value.trim();
       const dateStr = datePicker.value;
       if (!text) return alert("내용을 입력해주세요");
-
       if (!diaryData[dateStr]) diaryData[dateStr] = [];
 
       if (editIndex.value === "") {
         diaryData[dateStr].push({ title: text, views: 0 });
       } else {
-        const idx = parseInt(editIndex.value, 10);
-        diaryData[dateStr][idx].title = text;
+        diaryData[dateStr][parseInt(editIndex.value)] = { ...diaryData[dateStr][parseInt(editIndex.value)], title: text };
       }
 
-      saveToLocalStorage();
       entryModal.hide();
       updateAllViews();
     });
@@ -240,17 +256,11 @@
       const keyword = e.target.value.trim().toLowerCase();
       const resultsEl = document.getElementById("searchResults");
       resultsEl.innerHTML = "";
-
       if (!keyword) return;
 
-      const matchedDates = [];
-
-      for (const date in diaryData) {
-        const entries = diaryData[date];
-        if (entries.some(entry => entry.title.toLowerCase().includes(keyword))) {
-          matchedDates.push(date);
-        }
-      }
+      const matchedDates = Object.keys(diaryData).filter(date =>
+        diaryData[date].some(entry => entry.title.toLowerCase().includes(keyword))
+      );
 
       if (matchedDates.length === 0) {
         resultsEl.innerHTML = `<li class="list-group-item text-muted">검색 결과가 없습니다.</li>`;
@@ -271,7 +281,6 @@
     });
 
     window.addEventListener("DOMContentLoaded", () => {
-      loadFromLocalStorage();
       const today = new Date().toISOString().split("T")[0];
       datePicker.value = today;
       updateAllViews();
