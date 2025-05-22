@@ -6,11 +6,6 @@ const express = require('express');
 const morgan = require('morgan');
 const expressLayouts = require('express-ejs-layouts');
 const connectDB = require('./config/db');  
-const OpenAI = require('openai');
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -71,6 +66,12 @@ app.listen(PORT, () => {
 });
 
 //open Ai Api
+const OpenAI = require('openai');
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
 app.post("/api/keyword-extract", async (req, res) => {
     const userText = req.body.text;
 
