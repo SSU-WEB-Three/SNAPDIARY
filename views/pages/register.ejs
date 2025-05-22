@@ -39,5 +39,20 @@
       <button type="submit">회원가입</button>
     </form>
   </div>
+
+  <script>
+    const form = document.querySelector('form');
+  
+    form.addEventListener('submit', function(e) {
+      const password = document.getElementById('password').value;
+      const passwordConfirm = document.getElementById('passwordConfirm').value;
+    
+      if (password !== passwordConfirm) {
+        alert('비밀번호가 일치하지 않습니다.');
+        e.preventDefault();
+      }
+    });
+  </script>
+  
 </body>
 </html>
