@@ -70,12 +70,6 @@ function getRandomGreeting() {
     return greetings[index];
 }
 
-// 페이지 로드 시 greeting-text 먼저 출력
-document.addEventListener("DOMContentLoaded", () => {
-    const randomMessage = getRandomGreeting();
-    addLog(randomMessage, "left");
-});
-
 // 필터링 단어 목록 (비속어, 욕설 등)
 const prohibitedWords = [
     // 일반 욕설
@@ -106,60 +100,8 @@ const prohibitedWords = [
 // 최소 입력 길이 설정
 const MIN_INPUT_LENGTH = 10;
 
-// 입력 검증 함수
-function isInputValid(text) {
-    // 공백 제거 및 소문자로 변환
-    const cleanedText = text.trim().toLowerCase();
-
-    // 짧은 글자 필터링
-    if (cleanedText.length < MIN_INPUT_LENGTH) {
-        alert(`입력한 문장이 너무 짧습니다. 최소 ${MIN_INPUT_LENGTH}자 이상 입력해주세요.`);
-        return false;
-    }
-
-    // 필터링 단어가 포함되어 있는지 확인
-    for (const word of prohibitedWords) {
-        if (cleanedText.includes(word)) {
-            alert("부적절한 표현이 포함되어 있습니다. 다시 입력해주세요.");
-            return false;
-        }
-    }
-    return true;
-}
-
-// 입력 검증 함수
-function isInputValid(text) {
-    // 공백 제거 및 소문자로 변환
-    const cleanedText = text.trim().toLowerCase();
-
-    // 필터링 단어가 포함되어 있는지 확인
-    for (const word of prohibitedWords) {
-        if (cleanedText.includes(word)) {
-            return false;
-        }
-    }
-    return true;
-}
-
 // 사용자 입력 처리 (버튼 클릭 또는 엔터 키)
-document.getElementById("search-btn").addEventListener("click", handleUserInput);
-document.getElementById("search-input").addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-        handleUserInput();
-        event.preventDefault();
-    }
-});
-
-// 시간 포맷 함수 (HH:mm)
-function getCurrentTime() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
-}
-
-// 사용자 입력 처리 함수
-function handleUserInput() {
+async function handleUserInput() {
     const userInput = document.getElementById("search-input").value;
 
     // 입력 길이 검증
@@ -169,23 +111,67 @@ function handleUserInput() {
         return;
     }
 
-    // 욕설 검증
+    // 욕설 필터링
     if (!isInputValid(userInput)) {
         alert("부적절한 표현이 포함되어 있습니다. 다시 입력해주세요.");
         document.getElementById("search-input").value = "";
         return;
     }
 
-    if (userInput.trim()) {
-        // 사용자 입력을 먼저 대화창에 추가
-        addLog(userInput, "right");      
-        // 새로운 랜덤 문구를 바로 대화창에 추가
-        const randomMessage = getRandomGreeting();
-        addLog(randomMessage, "left");
+    // 사용자 입력 출력
+    addLog(userInput, "right");
 
-        // 입력 필드 초기화
-        document.getElementById("search-input").value = "";
+    // 백엔드로 keyword 추출 요청
+    try {
+        const response = await fetch("/api/keyword-extract", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ text: userInput }),
+        });
+
+        const data = await response.json();
+
+        if (data.keyword) {
+            // 추출된 키워드 출력
+            alert(`오늘의 키워드: ${data.keyword}`, "left");
+        } else {
+            alert("키워드를 추출하지 못했어요. 다시 시도해 주세요.", "left");
+        }
+    } catch (err) {
+        console.error("키워드 추출 오류:", err);
+        addLog("키워드 분석 중 오류가 발생했어요.", "left");
     }
+
+    // 입력창 초기화
+    document.getElementById("search-input").value = "";
+
+    // 추가 랜덤 문구 출력 (선택)
+    const randomMessage = getRandomGreeting();
+    addLog(randomMessage, "left");
+}
+
+// 입력 검증 함수
+function isInputValid(text) {
+    // 공백 제거 및 소문자로 변환
+    const cleanedText = text.trim().toLowerCase();
+
+    // 필터링 단어가 포함되어 있는지 확인
+    for (const word of prohibitedWords) {
+        if (cleanedText.includes(word)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// 시간 포맷 함수 (HH:mm)
+function getCurrentTime() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
 }
 
 // 입력된 내용을 카드에 추가하는 함수
@@ -233,6 +219,23 @@ async function fetchQuote() {
 
 // 페이지 로드 시 명언 불러오기
 document.addEventListener("DOMContentLoaded", fetchQuote);
+
+document.addEventListener("DOMContentLoaded", () => {
+    const randomMessage = getRandomGreeting();
+    addLog(randomMessage, "left");
+
+    // 이 부분 추가
+    document.getElementById("search-btn").addEventListener("click", handleUserInput);
+    document.getElementById("search-input").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            handleUserInput();
+            event.preventDefault();
+        }
+    });
+
+    fetchQuote();
+});
+
 
 </script>
 </body>

@@ -6,6 +6,11 @@ const express = require('express');
 const morgan = require('morgan');
 const expressLayouts = require('express-ejs-layouts');
 const connectDB = require('./config/db');  
+const OpenAI = require('openai');
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -64,3 +69,33 @@ app.post('/login', (req, res) => {
 app.listen(PORT, () => {
     console.log(`✅ Server running at http://localhost:${PORT}`);
 });
+
+//open Ai Api
+app.post("/api/keyword-extract", async (req, res) => {
+    const userText = req.body.text;
+
+    const prompt = `
+"${userText}"
+
+위 문장에서 가장 핵심적인 하나의 키워드만 한국어로 정확히 추출해서 출력해 주세요.
+오직 키워드 한 단어만 출력해주세요. 부가 설명, 문장 없이 단어 하나만 반환하세요.
+    `.trim();
+
+    try {
+        const completion = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+                { role: "user", content: prompt }
+            ],
+            max_tokens: 10,
+            temperature: 0.3
+        });
+
+        const keyword = completion.choices[0].message.content.trim();
+        res.json({ keyword });
+    } catch (err) {
+        console.error("OpenAI 오류:", err.message);
+        res.status(500).json({ error: "OpenAI 처리 실패" });
+    }
+});
+
