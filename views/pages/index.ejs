@@ -224,7 +224,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const randomMessage = getRandomGreeting();
     addLog(randomMessage, "left");
 
-    // 이 부분 추가
     document.getElementById("search-btn").addEventListener("click", handleUserInput);
     document.getElementById("search-input").addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
@@ -233,7 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    fetchQuote();
+    fetchQuote(); 
 });
 
 
