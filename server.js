@@ -7,6 +7,8 @@ const morgan = require('morgan');
 const expressLayouts = require('express-ejs-layouts');
 const connectDB = require('./config/db');  
 const bodyParser = require('body-parser');
+const DiaryEntry = require('./models/DiaryEntry');
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -48,9 +50,12 @@ app.get('/', (req, res) => {
 //});
 
 app.get('/mypage', (req, res) => {
-    res.render('pages/mypage', { title: '마이 페이지' });
+  const userId = req.session.user_id || "guest_user"; // 실제 로그인 정보 사용 시 수정 가능
+  res.render('pages/mypage', {
+    title: '마이 페이지',
+    userId
+  });
 });
-
 app.get('/login', (req, res) => {
     res.render('pages/login', { layout: false });
 });
@@ -69,6 +74,66 @@ app.post('/register', (req, res) => {
 
 app.post('/login', (req, res) => {
     res.redirect('/');
+});
+
+app.post('/api/diary/save', async (req, res) => {
+  const { user_id, date, title, index } = req.body;
+
+  if (!user_id || !date || !title) {
+    return res.status(400).send('필수 값 누락');
+  }
+
+  try {
+    if (index !== undefined) {
+      const entries = await DiaryEntry.find({ user_id, date });
+      if (!entries[index]) return res.status(404).send('수정 대상 없음');
+
+      entries[index].title = title;
+      await entries[index].save();
+    } else {
+      await DiaryEntry.create({ user_id, date, title, views: 0 });
+    }
+
+    res.send('저장 완료');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('저장 실패');
+  }
+});
+
+// 3. 날짜별 일기 불러오기
+app.get('/api/diary/:user_id/:date', async (req, res) => {
+  try {
+    const { user_id, date } = req.params;
+    const entries = await DiaryEntry.find({ user_id, date });
+    res.json(entries);
+  } catch (err) {
+    res.status(500).send('불러오기 실패');
+  }
+});
+
+// 4. 전체 일기 불러오기 (잔디차트용)
+app.get('/api/diary-all/:user_id', async (req, res) => {
+  try {
+    const entries = await DiaryEntry.find({ user_id: req.params.user_id });
+    res.json(entries);
+  } catch (err) {
+    res.status(500).send('전체 불러오기 실패');
+  }
+});
+
+// 5. 일기 삭제
+app.delete('/api/diary/delete', async (req, res) => {
+  const { user_id, date, index } = req.body;
+  try {
+    const entries = await DiaryEntry.find({ user_id, date });
+    if (!entries[index]) return res.status(404).send('삭제 대상 없음');
+
+    await DiaryEntry.findByIdAndDelete(entries[index]._id);
+    res.send('삭제 완료');
+  } catch (err) {
+    res.status(500).send('삭제 실패');
+  }
 });
 
 //블록 저장

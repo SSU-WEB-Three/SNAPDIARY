@@ -65,6 +65,10 @@
   </style>
 </head>
 <body>
+  <script>
+    const userId = "<%= userId %>";
+  </script>
+
   <div class="container mt-4">
     <div class="row">
       <!-- 왼쪽 사이드바 -->
@@ -147,6 +151,22 @@
     const viewContent = document.getElementById("viewContent");
     const viewViews = document.getElementById("viewViews");
 
+    window.addEventListener("DOMContentLoaded", async () => {
+      const today = new Date().toISOString().split("T")[0];
+      datePicker.value = today;
+
+      const res = await fetch(`/api/diary-all/${userId}`);
+      const entries = await res.json();
+
+      diaryData = {};
+      entries.forEach(entry => {
+        if (!diaryData[entry.date]) diaryData[entry.date] = [];
+        diaryData[entry.date].push(entry);
+      });
+
+      updateAllViews();
+    });
+
     function renderCards(dateStr, entries = diaryData[dateStr]) {
       cardContainer.innerHTML = "";
       if (!entries || entries.length === 0) {
@@ -172,9 +192,7 @@
           viewContent.textContent = entry.title;
           viewViews.textContent = `👀 조회수: ${entry.views}`;
           viewModal.show();
-          renderCards(dateStr, entries);
-          renderGrassChart();
-        }, { once: true });
+        });
         cardContainer.appendChild(card);
       });
     }
@@ -218,11 +236,17 @@
       entryModal.show();
     };
 
-    window.deleteEntry = function(dateStr, index) {
-      if (confirm("이 일기를 삭제할까요?")) {
-        diaryData[dateStr].splice(index, 1);
-        updateAllViews();
-      }
+    window.deleteEntry = async function(dateStr, index) {
+      if (!confirm("이 일기를 삭제할까요?")) return;
+
+      const res = await fetch('/api/diary/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, date: dateStr, index })
+      });
+
+      if (!res.ok) return alert('삭제 실패');
+      location.reload();
     };
 
     writeBtn.addEventListener("click", () => {
@@ -231,21 +255,29 @@
       entryModal.show();
     });
 
-    entryForm.addEventListener("submit", (e) => {
+    entryForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = entryText.value.trim();
       const dateStr = datePicker.value;
-      if (!text) return alert("내용을 입력해주세요");
-      if (!diaryData[dateStr]) diaryData[dateStr] = [];
+      const indexVal = editIndex.value;
 
-      if (editIndex.value === "") {
-        diaryData[dateStr].push({ title: text, views: 0 });
-      } else {
-        diaryData[dateStr][parseInt(editIndex.value)] = { ...diaryData[dateStr][parseInt(editIndex.value)], title: text };
-      }
+      if (!text) return alert("내용을 입력해주세요");
+
+      const res = await fetch('/api/diary/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          date: dateStr,
+          title: text,
+          index: indexVal === "" ? undefined : parseInt(indexVal)
+        })
+      });
+
+      if (!res.ok) return alert('저장 실패');
 
       entryModal.hide();
-      updateAllViews();
+      location.reload();
     });
 
     datePicker.addEventListener("change", () => {
@@ -278,12 +310,6 @@
         });
         resultsEl.appendChild(li);
       });
-    });
-
-    window.addEventListener("DOMContentLoaded", () => {
-      const today = new Date().toISOString().split("T")[0];
-      datePicker.value = today;
-      updateAllViews();
     });
   </script>
 </body>
