@@ -11,6 +11,14 @@ const bodyParser = require('body-parser');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+//세션 (임시 : 수정하셔도 됨)
+const session = require('express-session');
+app.use(session({
+    secret: 'yourSecret',
+    resave: false,
+    saveUninitialized: true
+}));
+
 // MongoDB 연결
 connectDB();
 
@@ -35,9 +43,9 @@ app.get('/', (req, res) => {
 });
 
 
-app.get('/blockui', (req, res) => {
-    res.render('pages/blockui', { title: '블록 페이지' });
-});
+//app.get('/blockui', (req, res) => {
+  //  res.render('pages/blockui', { title: '블록 페이지' });
+//});
 
 app.get('/mypage', (req, res) => {
     res.render('pages/mypage', { title: '마이 페이지' });
@@ -63,6 +71,7 @@ app.post('/login', (req, res) => {
     res.redirect('/');
 });
 
+//블록 저장
 app.post('/save-blocks',(req, res) => {
     const blockList = req.body;
 
@@ -79,6 +88,19 @@ app.post('/save-blocks',(req, res) => {
         console.error('블록 저장 오류: ', err);
         res.status(500).send('블록 저장 실패');
      });
+});
+
+//
+app.get('/blockui/:pageId', (req, res) => {
+
+    const pageId = req.params.pageId;
+    const userId = req.session.user_id || "guest_user";
+
+    res.render('pages/blockui', {
+        title: '블록페이지',
+        pageId : pageId,
+        userId : userId
+    });
 });
 
 

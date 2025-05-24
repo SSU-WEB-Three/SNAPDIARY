@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>칠교놀이 UI</title>
-  <link rel="stylesheet" href="./css/blockstyle.css">
+  <link rel="stylesheet" href="/css/blockstyle.css">
 </head>
 <body>
   <div class="container">
@@ -25,6 +25,9 @@
   </div>
 
   <script>
+    const userId = "<%= userId %>";
+    const pageId = "<%= pageId %>";
+
     function addShape(type) {
       const canvas = document.querySelector('.canvas');
       const newBlock = document.createElement('div');
@@ -101,7 +104,7 @@
 
         let rotation = 0;
         if (transform && transform !== 'none') {
-          const match = transform.match(/rotate\(([-d.]+)deg\)/);
+          transform.match(/rotate\(([-\d.]+)deg\)/);
           if (match) rotation = parseFloat(match[1]);
         }
 
@@ -130,8 +133,6 @@
     }
 
     document.getElementById('saveBtn').addEventListener('click',() => {
-      const userId = "user_id_placeholder"
-      const pageId = "page_id_placeholder"
 
       const blockData = extractBlockData(userId, pageId);
 
