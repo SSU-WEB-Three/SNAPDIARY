@@ -33,6 +33,7 @@
       newBlock.style.left = '100px';
       newBlock.style.top = '100px';
       newBlock.style.transform = '';
+      newBlock.dataset.shape = type;
 
       makeDraggableAndRotatalbe(newBlock);
       canvas.appendChild(newBlock);
@@ -100,7 +101,7 @@
 
         let rotation = 0;
         if (transform && transform !== 'none') {
-          const match = transform.match(/rotate\(([-d.])+)deg\)/);
+          const match = transform.match(/rotate\(([-d.]+)deg\)/);
           if (match) rotation = parseFloat(match[1]);
         }
 
@@ -117,7 +118,7 @@
             y : y
           },
           rotation : rotation,
-          created_at : new Date().toISOString,
+          created_at : new Date().toISOString(),
           user_id : userId
         };
 
