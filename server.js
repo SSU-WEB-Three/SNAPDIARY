@@ -6,6 +6,7 @@ const express = require('express');
 const morgan = require('morgan');
 const expressLayouts = require('express-ejs-layouts');
 const connectDB = require('./config/db');  
+const bodyParser = require('body-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +25,9 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: true }));
 
 // 기본 라우터
 app.get('/', (req, res) => {
@@ -57,6 +61,24 @@ app.post('/register', (req, res) => {
 
 app.post('/login', (req, res) => {
     res.redirect('/');
+});
+
+app.post('/save-blocks',(req, res) => {
+    const blockList = req.body;
+
+    if(!Array.isArray(blockList)) {
+        return res.status(400).send('데이터 형식 오류:배열이 아닙니다.');
+    }
+
+    mydb.collection('blocks').insertMany(blockList)
+     .then(result => {
+        console.log('블록 저장 완료: ', result.insertedCount, '개');
+        res.status(200).send('블록 저장 성공!');
+     })
+     .catch(err => {
+        console.error('블록 저장 오류: ', err);
+        res.status(500).send('블록 저장 실패');
+     });
 });
 
 

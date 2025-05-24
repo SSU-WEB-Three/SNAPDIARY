@@ -10,6 +10,7 @@
   <div class="container">
     
     <div class="floating-buttons">
+      <button id="saveBtn">저장하기</button>
       <button onclick="addShape('triangle large')">큰 삼각형</button>
       <button onclick="addShape('triangle small')">작은 삼각형</button>
       <button onclick="addShape('square')">정사각형</button>
@@ -84,6 +85,7 @@
         //"position": { "x": 120, "y": 200 },  도형의 배치 위치 
         //"rotation": 45,   회전 정보
         //"created_at": "2025-05-20T14:05:00.123Z" 해당 도형이 배치된 시각
+        //"user_id" : 유저의 아이디
       //}
 
     // DB에 저장할 요소들 추출하는 과정
@@ -91,15 +93,59 @@
       const blocks = document.querySelectorAll('.block');
       const blockDataList = [];
 
-      // 블록 개별 작업 선언
+      // 블록 개별 작업 선언 : 배치하는 블록 하나하나 개별적으로 작업하겠다는 뜻임..
       blocks.forEach((block) => {
         const style = window.getComputedStyle(block);
         const transform = style.transform;
+
         let rotation = 0;
-        
+        if (transform && transform !== 'none') {
+          const match = transform.match(/rotate\(([-d.])+)deg\)/);
+          if (match) rotation = parseFloat(match[1]);
+        }
+
+        const x = parseInt (block.style.left || 0);
+        const y = parseInt(block.style.top || 0);
+
+        const shapeType = block.dataset.shape || "unknown";
+
+        const blockData = {
+          page_id : pageId,
+          shape_type : shapeType,
+          position : {
+            x : x,
+            y : y
+          },
+          rotation : rotation,
+          created_at : new Date().toISOString,
+          user_id : userId
+        };
+
+        blockDataList.push(blockData);
 
       });
+
+      return blockDataList;
     }
+
+    document.getElementById('saveBtn').addEventListener('click',() => {
+      const userId = "user_id_placeholder"
+      const pageId = "page_id_placeholder"
+
+      const blockData = extractBlockData(userId, pageId);
+
+      fetch('/save-blocks', {
+        method: 'POST',
+        headers: {'Content-Type' : 'application/json'},
+        body: JSON.stringify(blockData)
+      })
+      .then(res => res.text())
+      .then(msg => alert(msg))
+      .catch(err => {
+        console.error('저장 오류: ', err);
+        alert('저장 실패');
+      });
+    });
   </script>
 </body>
 </html>
