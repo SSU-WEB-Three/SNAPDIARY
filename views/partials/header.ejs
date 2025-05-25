@@ -1,7 +1,14 @@
 <header class="header">
   <h1>Snapnote</h1>
   <div class="auth-buttons">
-    <a href="/login"><button class="login-btn">로그인</button></a>
-    <a href="/register"><button class="signup-btn">회원가입</button></a>
+    <% if (user) { %>
+      <span class="nickname"><%= user.usernickname %> 님</span>
+      <form action="/logout" method="get" style="display:inline;">
+        <button type="submit" class="logout-btn">로그아웃</button>
+      </form>
+    <% } else { %>
+      <a href="/login"><button class="login-btn">로그인</button></a>
+      <a href="/register"><button class="signup-btn">회원가입</button></a>
+    <% } %>
   </div>
 </header>

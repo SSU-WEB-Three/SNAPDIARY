@@ -8,28 +8,31 @@
 </head>
 <body>
   <div class="form-wrapper">
+    <% if (error) { %>
+        <div class="register-error"><%= error %></div>
+    <% } %>
     <h2>회원가입</h2>
     <form action="/register" method="post">
       <label for="email">이메일</label>
-      <input type="email" id="email" name="email" placeholder="이메일 입력" required>
+      <input type="email" id="useremail" name="useremail" placeholder="이메일 입력" required>
 
       <label for="password">비밀번호</label>
-      <input type="password" id="password" name="password" placeholder="영어, 숫자, 특수문자 포함 6 ~ 20자" required>
-
+      <input type="password" id="userpassword" name="userpassword" placeholder="영어, 숫자, 특수문자 포함 6 ~ 20자" required>
+    
       <label for="passwordConfirm">비밀번호 확인</label>
       <input type="password" id="passwordConfirm" name="passwordConfirm" placeholder="영어, 숫자, 특수문자 포함 6 ~ 20자" required>
 
       <label for="name">이름</label>
-      <input type="text" id="name" name="name" placeholder="이름 입력" required>
+      <input type="text" id="username" name="username" placeholder="이름 입력" required>
 
       <label for="phone">전화번호</label>
-      <input type="tel" id="phone" name="phone" placeholder="전화번호 입력 ( - 제외 )" required>
+      <input type="tel" id="userphone" name="userphone" placeholder="전화번호 입력 ( - 제외 )" required>
 
       <label for="nickname">닉네임</label>
-      <input type="text" id="nickname" name="nickname" placeholder="닉네임 입력" required>
+      <input type="text" id="usernickname" name="usernickname" placeholder="닉네임 입력" required>
 
       <label for="birth">생년월일</label>
-      <input type="date" id="birth" name="birth" required>
+      <input type="date" id="userbirth" name="userbirth" required>
 
       <div class="checkbox-row">
         <label><input type="checkbox" id="agree" required> 개인정보 수집 및 이용에 동의합니다.</label>
@@ -44,10 +47,10 @@
     const form = document.querySelector('form');
   
     form.addEventListener('submit', function(e) {
-      const password = document.getElementById('password').value;
+      const userpassword = document.getElementById('userpassword').value;
       const passwordConfirm = document.getElementById('passwordConfirm').value;
     
-      if (password !== passwordConfirm) {
+      if (userpassword !== passwordConfirm) {
         alert('비밀번호가 일치하지 않습니다.');
         e.preventDefault();
       }

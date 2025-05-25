@@ -11,10 +11,10 @@
   <button id="toggle-btn" class="toggle-btn">☰</button>
 
   <!-- 사이드바 포함 -->
-  <%- include('../partials/sidebar') %>
+  <%- include('../partials/sidebar', { user : user }) %>
 
   <!-- 헤더 포함 -->
-  <%- include('../partials/header') %>
+  <%- include('../partials/header', { user : user }) %>
 
   <!-- 메인 콘텐츠 -->
   <main class="content">
