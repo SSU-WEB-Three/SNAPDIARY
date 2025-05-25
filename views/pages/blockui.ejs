@@ -28,7 +28,28 @@
     const userId = "<%= userId %>";
     const pageId = "<%= pageId %>";
 
+    let currentKeywordCount = 0;
+    let currentBlockCount = 0;
+
+    async function fetchKeywordCount() {
+      try {
+        const res = await fetch(`/api/keywords/count/${userId}`);
+        const data = await res.json();
+        currentKeywordCount = data.count;
+        console.log("오늘 키워드 수:", currentKeywordCount);
+      } catch (err) {
+        console.error("키워드 수 조회 실패:", err);
+      }
+    }
+
+    fetchKeywordCount();
+
     function addShape(type) {
+      if (currentBlockCount >= currentKeywordCount) {
+        alert("오늘 입력한 키워드 수만큼만 블록을 생성할 수 있습니다.");
+        return;
+      }
+
       const canvas = document.querySelector('.canvas');
       const newBlock = document.createElement('div');
 
@@ -40,6 +61,8 @@
 
       makeDraggableAndRotatalbe(newBlock);
       canvas.appendChild(newBlock);
+
+      currentBlockCount++;
     }
 
     document.querySelectorAll('.block').forEach(makeDraggableAndRotatalbe);
@@ -48,7 +71,6 @@
       let angle = 0;
       let dragged = false;
 
-      // 회전 기능
       block.addEventListener('click', (e) => {
         if (dragged) return;
         angle = (angle + 45) % 360;
@@ -58,7 +80,6 @@
         }
       });
 
-      // 드래그 기능
       block.addEventListener('mousedown', (e) => {
         e.preventDefault();
         const shiftX = e.clientX - block.offsetLeft;
@@ -83,21 +104,10 @@
       block.ondragstart = () => false;
     }
 
-      //{   DB에 저장하게 될 요소들
-        //"page_id": "664b4ff945e10a0012ab3456", 어떤 날짜의 기록페이지인지 기억해야함.
-        //"shape_type": "triangle large",   도형의 정보 (큰/작은 삼각형, 정사각형, 평행사변형)
-        //"position": { "x": 120, "y": 200 },  도형의 배치 위치 
-        //"rotation": 45,   회전 정보
-        //"created_at": "2025-05-20T14:05:00.123Z" 해당 도형이 배치된 시각
-        //"user_id" : 유저의 아이디
-      //}
-
-    // DB에 저장할 요소들 추출하는 과정
     function extractBlockData() {
       const blocks = document.querySelectorAll('.block');
       const blockDataList = [];
 
-      // 블록 개별 작업 선언 : 배치하는 블록 하나하나 개별적으로 작업하겠다는 뜻임..
       blocks.forEach((block) => {
         const style = window.getComputedStyle(block);
         const transform = style.transform;
@@ -108,32 +118,26 @@
           if (match) rotation = parseFloat(match[1]);
         }
 
-        const x = parseInt (block.style.left || 0);
+        const x = parseInt(block.style.left || 0);
         const y = parseInt(block.style.top || 0);
-
         const shapeType = block.dataset.shape || "unknown";
 
         const blockData = {
           page_id : pageId,
           shape_type : shapeType,
-          position : {
-            x : x,
-            y : y
-          },
+          position : { x, y },
           rotation : rotation,
           created_at : new Date().toISOString(),
           user_id : userId
         };
 
         blockDataList.push(blockData);
-
       });
 
       return blockDataList;
     }
 
     document.getElementById('saveBtn').addEventListener('click',() => {
-
       const blockData = extractBlockData(userId, pageId);
 
       fetch('/save-blocks', {
@@ -151,4 +155,3 @@
   </script>
 </body>
 </html>
-

@@ -8,6 +8,8 @@ const expressLayouts = require('express-ejs-layouts');
 const connectDB = require('./config/db');  
 const bodyParser = require('body-parser');
 const DiaryEntry = require('./models/DiaryEntry');
+const Keyword = require('./models/Keyword');
+const mongoose = require('mongoose');
 
 
 const app = express();
@@ -70,6 +72,8 @@ app.get('/mypage', (req, res) => {
     userId
   });
 });
+
+
 
 app.get('/login', (req, res) => {
     res.render('pages/login', { layout: false, error: null, user : req.session.user || null });
@@ -149,6 +153,14 @@ app.post('/login', async (req, res) => {
   }
 });
 
+
+//로그아웃 시 메인페이지로 이동
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/');
+  });
+});
+
 app.post('/api/diary/save', async (req, res) => {
   const { user_id, date, title, index } = req.body;
 
@@ -173,14 +185,6 @@ app.post('/api/diary/save', async (req, res) => {
     res.status(500).send('저장 실패');
   }
 });
-
-//로그아웃 시 메인페이지로 이동
-app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/');
-  });
-});
-
 
 // 3. 날짜별 일기 불러오기
 app.get('/api/diary/:user_id/:date', async (req, res) => {
@@ -236,26 +240,32 @@ app.post('/save-blocks', async (req, res) => {
 });
 
 app.get('/blockui', (req, res) => {
-  res.redirect('/login');
+   if (!req.session.user) {
+    return res.redirect('/login');
+  }
 });
 
-//
 app.get('/blockui/:pageId', (req, res) => {
-    const pageId = req.params.pageId;
-    const userId = req.session.user_id || "guest_user";
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+  const pageId = req.params.pageId;
+  const user = req.session.user || null;
+  const userId = user ? user.user_id : null;
 
-    res.render('pages/blockui', {
-        user: req.session.user || null,
-        title: '블록페이지',
-        pageId : pageId,
-        userId : userId
-    });
+  res.render('pages/blockui', {
+    title: '블록페이지',
+    user,
+    pageId,
+    userId
+  });
 });
+
 
 
 // 서버 시작
 app.listen(PORT, () => {
-    console.log(`✅ Server running at http://localhost:${PORT}`);
+    console.log(`Server running at http://localhost:${PORT}`);
 });
 
 //open Ai Api
@@ -267,15 +277,32 @@ const openai = new OpenAI({
 
 app.post("/api/keyword-extract", async (req, res) => {
     const userText = req.body.text;
+    const userId = req.body.user_id;
 
-    const prompt = `
-"${userText}"
+    if (!userText || !userId) {
+        return res.status(400).json({ error: "텍스트 또는 사용자 ID 누락" });
+    }
 
-위 문장에서 가장 핵심적인 하나의 키워드만 한국어로 정확히 추출해서 출력해 주세요.
-오직 키워드 한 단어만 출력해주세요. 부가 설명, 문장 없이 단어 하나만 반환하세요.
-    `.trim();
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
     try {
+        // 오늘 날짜 기준 키워드 개수 확인
+        const keywordCount = await Keyword.countDocuments({
+            user_id: userId,
+            date: today
+        });
+
+        if (keywordCount >= 8) {
+            return res.status(200).json({ keyword: null, message: "오늘은 키워드를 8개까지 저장할 수 있어요." });
+        }
+
+        // 키워드 생성 프롬프트
+        const prompt = `
+"${userText}"
+위 문장에서 가장 핵심적인 하나의 키워드만 한국어로 정확히 추출해서 출력해 주세요.
+오직 키워드 한 단어만 출력해주세요. 부가 설명, 문장 없이 단어 하나만 반환하세요.
+        `.trim();
+
         const completion = await openai.chat.completions.create({
             model: "gpt-3.5-turbo",
             messages: [
@@ -286,10 +313,66 @@ app.post("/api/keyword-extract", async (req, res) => {
         });
 
         const keyword = completion.choices[0].message.content.trim();
+
+        // 키워드 저장
+        await Keyword.create({
+            user_id: userId,
+            keyword,
+            date: today
+        });
+
         res.json({ keyword });
+
     } catch (err) {
-        console.error("OpenAI 오류:", err.message);
-        res.status(500).json({ error: "OpenAI 처리 실패" });
+        console.error("키워드 처리 오류:", err.message);
+        res.status(500).json({ error: "키워드 처리 실패" });
     }
 });
 
+
+const ChatLog = require('./models/ChatLog');
+
+app.post('/api/chatlog', async (req, res) => {
+  const { user_id, message, sender } = req.body;
+
+  if (!user_id || !message || !sender) {
+    return res.status(400).json({ error: '필수 항목 누락' });
+  }
+
+  try {
+    const newLog = await ChatLog.create({
+      user_id,
+      message,
+      sender
+    });
+
+    res.status(200).json({ success: true, data: newLog });
+  } catch (err) {
+    console.error('ChatLog 저장 오류:', err.message);
+    res.status(500).json({ error: '저장 실패' });
+  }
+});
+
+
+
+app.get('/api/keywords/count/:user_id', async (req, res) => {
+  const userId = req.params.user_id;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: "올바르지 않은 사용자 ID입니다." });
+  }
+
+  try {
+    const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+
+    const count = await Keyword.countDocuments({
+      user_id: userId,
+      date: today
+    });
+    console.log("count : " + count)
+    res.json({ count });
+  } catch (err) {
+    console.error("키워드 수 조회 오류:", err);
+    res.status(500).json({ error: "조회 실패" });
+  }
+});
