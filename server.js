@@ -13,15 +13,20 @@ const DiaryEntry = require('./models/DiaryEntry');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-//세션 (임시 : 수정하셔도 됨)
+//세션
 const session = require('express-session');
 app.use(session({
-    secret: 'yourSecret',
+    secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: false
 }));
 //몽구스 모델 연결
 const Block = require('./models/Block');
+const Account = require('./models/account');
+
+//bcrypt로 비밀번호 암호화
+const bcrypt = require('bcrypt');
+
 
 // MongoDB 연결
 connectDB();
@@ -43,7 +48,8 @@ app.use(bodyParser.urlencoded({extended: true }));
 
 // 기본 라우터
 app.get('/', (req, res) => {
-    res.render('pages/index', { title: '메인 화면' });
+    res.render('pages/index', { title: '메인 화면', user : req.session.user || null });
+    console.log('세션:', req.session)
 });
 
 
@@ -52,30 +58,95 @@ app.get('/', (req, res) => {
 //});
 
 app.get('/mypage', (req, res) => {
-  const userId = req.session.user_id || "guest_user"; // 실제 로그인 정보 사용 시 수정 가능
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+
+  const user = req.session.user;
+  const userId = req.session.user_id;
   res.render('pages/mypage', {
     title: '마이 페이지',
+    user,
     userId
   });
 });
+
 app.get('/login', (req, res) => {
-    res.render('pages/login', { layout: false });
+    res.render('pages/login', { layout: false, error: null, user : req.session.user || null });
 });
 
 app.get('/register', (req, res) => {
-    res.render('pages/register', { layout: false });
+    res.render('pages/register', { layout: false, error: null, user : req.session.user || null });
 });
 
 app.get('/register/success', (req, res) => {
-    res.render('pages/register-success', { layout: false });
+    res.render('pages/register-success', { layout: false, user : req.session.user || null });
 });
 
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
+  const { useremail, userpassword, username, userphone, usernickname, userbirth } = req.body;
+
+  //아이디 중복 여부 확인
+  try {
+    const duplication = await Account.findOne({ useremail });
+    if(duplication) {
+      return res.render('pages/register', {
+        layout: false,
+        error: "이미 가입된 이메일입니다."
+      });
+    }
+
+    const hashedpw = await bcrypt.hash(userpassword, 10);
+
+    await Account.create({
+      useremail,
+      userpassword : hashedpw,
+      username,
+      userphone,
+      usernickname,
+      userbirth
+    });
+    console.log("회원가입 성공");
     res.redirect('/register/success');
+  } catch (err) {
+    console.log("회원가입 실패", err.message);
+    res.status(500).send("회원가입 실패");
+  }
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
+  const { useremail, userpassword } = req.body;
+
+  //아이디, 비밀번호 일치 여부 확인
+  try {
+    const user = await Account.findOne({ useremail });
+
+    if(!user) {
+      return res.render('pages/login', {
+        layout: false,
+        error: "아이디 또는 비밀번호가 틀렸습니다. 정확하게 입력해 주세요."
+      });
+    }
+    
+    const match = await bcrypt.compare(userpassword, user.userpassword);
+    if(!match){
+      return res.render('pages/login', {
+        layout: false,
+        error: "아이디 또는 비밀번호가 틀렸습니다. 정확하게 입력해 주세요."
+      });
+    }
+
+    req.session.user = {
+      user_id : user._id,
+      useremail : user.useremail,
+      username : user.username,
+      usernickname : user.usernickname
+    };
     res.redirect('/');
+  } catch (err) {
+    console.log("로그인 에러", err.message);
+    res.status(500).send("로그인 중 오류 발생");
+  }
 });
 
 app.post('/api/diary/save', async (req, res) => {
@@ -102,6 +173,14 @@ app.post('/api/diary/save', async (req, res) => {
     res.status(500).send('저장 실패');
   }
 });
+
+//로그아웃 시 메인페이지로 이동
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/');
+  });
+});
+
 
 // 3. 날짜별 일기 불러오기
 app.get('/api/diary/:user_id/:date', async (req, res) => {
@@ -156,13 +235,17 @@ app.post('/save-blocks', async (req, res) => {
     }
 });
 
+app.get('/blockui', (req, res) => {
+  res.redirect('/login');
+});
+
 //
 app.get('/blockui/:pageId', (req, res) => {
-
     const pageId = req.params.pageId;
     const userId = req.session.user_id || "guest_user";
 
     res.render('pages/blockui', {
+        user: req.session.user || null,
         title: '블록페이지',
         pageId : pageId,
         userId : userId

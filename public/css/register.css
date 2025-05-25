@@ -58,3 +58,12 @@ button {
     cursor: pointer;
     font-size: 15px;
 }
+.register-error {
+  color: #ff3333;
+  background: #fff0f0;
+  padding: 10px 0;
+  margin-bottom: 12px;
+  text-align: center;
+  border-radius: 8px;
+  font-weight: bold;
+}
