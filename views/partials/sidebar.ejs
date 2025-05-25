@@ -2,7 +2,7 @@
     <h2>메인 화면</h2>
     <ul>
         <li><a href="/" class="<%= title === '메인 화면' ? 'active' : '' %>"> 메인 화면</a></li>
-        <li><a href="/blockui/<%= user ? user.user_id : '' %>" class="<%= title === '블록 페이지' ? 'active' : '' %>"> 블록 꾸미기</a></li>
+        <li><a href="#" id="blockLink" class="<%= title === '블록 페이지' ? 'active' : '' %>"> 블록 꾸미기</a></li>
         <li><a href="#" class="<%= title === '#' ? 'active' : '' %>"> 커뮤니티</a></li>
         <li><a href="/mypage" class="<%= title === '마이 페이지' ? 'active' : '' %>"> 마이 페이지</a></li>
     </ul>
@@ -19,4 +19,31 @@
     content.classList.toggle('full');
   });
 });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const blockLink = document.getElementById('blockLink');
+    const userId = "<%= user ? user.user_id : '' %>";
+    const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+
+    blockLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const res = await fetch(`/api/blockmap-by-date/${userId}/${today}`);
+        if (res.ok) {
+          const map = await res.json();
+          // 존재하는 mapId 페이지로 이동
+          location.href = `/blockui/${map.map_id}`;
+        } else {
+          // map이 없으면 새 페이지 생성 or 안내
+          const newMapId = crypto.randomUUID();
+          location.href = `/blockui/${newMapId}`;
+        }
+      } catch (err) {
+        console.error("블록맵 확인 실패:", err);
+        alert("서버 오류 발생");
+      }
+    });
+  });
 </script>

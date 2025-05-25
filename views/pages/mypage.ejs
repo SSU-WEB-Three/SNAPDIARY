@@ -65,13 +65,13 @@
   </style>
 </head>
 <body>
-  <script>
-    const userId = "<%= userId %>";
-  </script>
+<script>
+ const userId = "<%= user ? user.user_id : '' %>";
+  console.log("userId 확인:", userId); 
+</script>
 
   <div class="container mt-4">
     <div class="row">
-      <!-- 왼쪽 사이드바 -->
       <div class="col-md-4">
         <div class="profile text-center mb-3">
           <img src="https://play-lh.googleusercontent.com/38AGKCqmbjZ9OuWx4YjssAz3Y0DTWbiM5HB0ove1pNBq_o9mtWfGszjZNxZdwt_vgHo=w480-h960-rw" alt="프로필 사진" />
@@ -83,8 +83,6 @@
         <input type="text" id="searchInput" class="form-control mb-2" placeholder="일기 내용 검색..." />
         <ul id="searchResults" class="list-group"></ul>
       </div>
-
-      <!-- 오른쪽 카드 및 잔디 영역 -->
       <div class="col-md-8">
         <div id="grassChart" class="grass-chart"></div>
         <div id="cardContainer"></div>
@@ -137,7 +135,6 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     let diaryData = {};
-
     const datePicker = document.getElementById("datePicker");
     const cardContainer = document.getElementById("cardContainer");
     const writeBtn = document.getElementById("writeBtn");
@@ -154,16 +151,13 @@
     window.addEventListener("DOMContentLoaded", async () => {
       const today = new Date().toISOString().split("T")[0];
       datePicker.value = today;
-
       const res = await fetch(`/api/diary-all/${userId}`);
       const entries = await res.json();
-
       diaryData = {};
       entries.forEach(entry => {
         if (!diaryData[entry.date]) diaryData[entry.date] = [];
         diaryData[entry.date].push(entry);
       });
-
       updateAllViews();
     });
 
@@ -275,7 +269,6 @@
       });
 
       if (!res.ok) return alert('저장 실패');
-
       entryModal.hide();
       location.reload();
     });

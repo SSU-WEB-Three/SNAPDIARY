@@ -6,9 +6,6 @@ const express = require('express');
 const morgan = require('morgan');
 const expressLayouts = require('express-ejs-layouts');
 const connectDB = require('./config/db');  
-const bodyParser = require('body-parser');
-const DiaryEntry = require('./models/DiaryEntry');
-const Keyword = require('./models/Keyword');
 const mongoose = require('mongoose');
 
 
@@ -23,12 +20,15 @@ app.use(session({
     saveUninitialized: false
 }));
 //몽구스 모델 연결
-const Block = require('./models/Block');
 const Account = require('./models/account');
 
 //bcrypt로 비밀번호 암호화
 const bcrypt = require('bcrypt');
-
+const bodyParser = require('body-parser');
+const DiaryEntry = require('./models/DiaryEntry');
+const Keyword = require('./models/Keyword');
+const Block = require('./models/Block');
+const BlockMap = require('./models/BlockMap');
 
 // MongoDB 연결
 connectDB();
@@ -60,19 +60,16 @@ app.get('/', (req, res) => {
 //});
 
 app.get('/mypage', (req, res) => {
-  if (!req.session.user) {
-    return res.redirect('/login');
-  }
+  if (!req.session.user) return res.redirect('/login');
 
   const user = req.session.user;
-  const userId = req.session.user_id;
+  const userId = user ? user.user_id : null; 
   res.render('pages/mypage', {
     title: '마이 페이지',
     user,
     userId
   });
 });
-
 
 
 app.get('/login', (req, res) => {
@@ -221,47 +218,119 @@ app.delete('/api/diary/delete', async (req, res) => {
   }
 });
 
-//블록 저장
-app.post('/save-blocks', async (req, res) => {
-    const blockList = req.body;
+app.post('/api/blocks', async (req, res) => {
+  const blockList = req.body;
 
-    if(!Array.isArray(blockList)) {
-        return res.status(400).send('데이터 형식 오류:배열이 아닙니다.');
-    }
+  if (!Array.isArray(blockList)) {
+    return res.status(400).send('블록 배열이 아님');
+  }
 
-    try {
-        const result = await Block.insertMany(blockList);
-        console.log('블록 저장 완료: ', result.length,'개');
-        res.status(200).send('블록 저장 성공');
-    } catch (err) {
-        console.error('블록 저장 실패:', err.message);
-        res.status(500).send('블록 저장 실패');
-    }
-});
-
-app.get('/blockui', (req, res) => {
-   if (!req.session.user) {
-    return res.redirect('/login');
+  try {
+    const savedBlocks = await Block.insertMany(blockList);
+    res.status(200).json(savedBlocks); // [{ _id: ..., ... }, ...]
+  } catch (err) {
+    console.error('블록 저장 실패:', err.message);
+    res.status(500).send('블록 저장 실패');
   }
 });
 
-app.get('/blockui/:pageId', (req, res) => {
+
+//블록 저장
+app.post('/save-blocks', async (req, res) => {
+  const { blockDataList, map_id, user_id } = req.body;
+
+  if (!Array.isArray(blockDataList) || !map_id || !user_id) {
+    return res.status(400).send('필수 값 누락');
+  }
+
+  try {
+    // 기존 블록 삭제
+    await Block.deleteMany({ _id: { $in: (await BlockMap.findOne({ map_id }))?.block_id || [] } });
+
+    // 블록 재생성
+    const savedBlockIds = [];
+    for (const block of blockDataList) {
+      const newBlock = new Block({
+        keyword_id: block.keyword_id || null,
+        shape_type: block.shape_type,
+        color: block.color || '#FFA500',
+        x_pos: block.x_pos,
+        y_pos: block.y_pos,
+        rotation_degree: block.rotation_degree,
+        user_id: user_id
+      });
+      const saved = await newBlock.save();
+      savedBlockIds.push(saved._id);
+    }
+
+    // BlockMap upsert
+    await BlockMap.updateOne(
+      { map_id },
+      {
+        $set: {
+          block_id: savedBlockIds,
+          user_id,
+          created_at: new Date()
+        }
+      },
+      { upsert: true }
+    );
+
+    res.status(200).send('블록 및 매핑 저장 완료');
+  } catch (err) {
+    console.error('저장 실패:', err.message);
+    res.status(500).send('저장 실패');
+  }
+});
+
+
+// 특정 유저의 오늘 날짜 맵 조회
+app.get('/api/blockmap-by-date/:user_id/:date', async (req, res) => {
+
+  const { user_id, date } = req.params;
+  try {
+    const map = await BlockMap.findOne({
+      user_id,
+      created_at: {
+        $gte: new Date(date + "T00:00:00.000Z"),
+        $lte: new Date(date + "T23:59:59.999Z")
+      }
+    }).populate('block_id');
+
+    if (!map) return res.status(404).send('해당 날짜 맵 없음');
+    res.json(map);
+  } catch (err) {
+    console.error('날짜 기반 BlockMap 조회 오류:', err);
+    res.status(500).send('서버 오류');
+  }
+});
+
+app.get('/api/blockmap/:mapId', async (req, res) => {
+  try {
+    const map = await BlockMap.findOne({ map_id: req.params.mapId }).populate('block_id');
+    if (!map) return res.status(404).send('맵을 찾을 수 없음');
+    res.json(map);
+  } catch (err) {
+    console.error("BlockMap 조회 오류:", err);
+    res.status(500).send('서버 오류');
+  }
+});
+
+app.get('/blockui/:mapId', (req, res) => {
   if (!req.session.user) {
     return res.redirect('/login');
   }
-  const pageId = req.params.pageId;
-  const user = req.session.user || null;
+  const mapId = req.params.mapId;
+  const user = req.session.user;
   const userId = user ? user.user_id : null;
 
   res.render('pages/blockui', {
     title: '블록페이지',
     user,
-    pageId,
-    userId
+    mapId,     
+    userId    
   });
 });
-
-
 
 // 서버 시작
 app.listen(PORT, () => {
@@ -274,6 +343,18 @@ const OpenAI = require('openai');
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
+app.get('/api/keywords/:user_id', async (req, res) => {
+  const userId = req.params.user_id;
+  try {
+    const keywords = await Keyword.find({ user_id: userId });
+    res.json(keywords);
+  } catch (err) {
+    console.error('키워드 조회 오류:', err);
+    res.status(500).json({ error: '조회 실패' });
+  }
+});
+
 
 app.post("/api/keyword-extract", async (req, res) => {
     const userText = req.body.text;
@@ -298,9 +379,9 @@ app.post("/api/keyword-extract", async (req, res) => {
 
         // 키워드 생성 프롬프트
         const prompt = `
-"${userText}"
-위 문장에서 가장 핵심적인 하나의 키워드만 한국어로 정확히 추출해서 출력해 주세요.
-오직 키워드 한 단어만 출력해주세요. 부가 설명, 문장 없이 단어 하나만 반환하세요.
+        "${userText}"
+        위 문장에서 가장 핵심적인 하나의 키워드만 한국어로 정확히 추출해서 출력해 주세요.
+        오직 키워드 한 단어만 출력해주세요. 부가 설명, 문장 없이 단어 하나만 반환하세요.
         `.trim();
 
         const completion = await openai.chat.completions.create({

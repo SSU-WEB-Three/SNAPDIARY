@@ -8,7 +8,6 @@
 </head>
 <body>
   <div class="container">
-    
     <div class="floating-buttons">
       <button id="saveBtn">저장하기</button>
       <button onclick="addShape('triangle large')">큰 삼각형</button>
@@ -18,140 +17,158 @@
     </div>
     <div class="main">
       <div class="header">블록 배치하기</div>
-      <div class="canvas">
-        
-      </div>
+      <div class="canvas"></div>
     </div>
   </div>
 
-  <script>
-    const userId = "<%= userId %>";
-    const pageId = "<%= pageId %>";
+<script>
+  const userId = "<%= userId %>";
+  const mapId = "<%= mapId %>";
 
-    let currentKeywordCount = 0;
-    let currentBlockCount = 0;
+  let currentKeywordCount = 0;
+  let currentBlockCount = 0;
 
-    async function fetchKeywordCount() {
+  async function fetchKeywordCount() {
+    try {
+      const res = await fetch(`/api/keywords/count/${userId}`);
+      const data = await res.json();
+      currentKeywordCount = data.count;
+    } catch (err) {
+      console.error("키워드 수 조회 실패:", err);
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", async () => {
+    await fetchKeywordCount();
+
+    if (mapId) {
       try {
-        const res = await fetch(`/api/keywords/count/${userId}`);
-        const data = await res.json();
-        currentKeywordCount = data.count;
-        console.log("오늘 키워드 수:", currentKeywordCount);
+        const res = await fetch(`/api/blockmap/${mapId}`);
+        const mapData = await res.json();
+        if (!mapData || !mapData.block_id) return;
+
+        const canvas = document.querySelector('.canvas');
+        mapData.block_id.forEach(block => {
+          const newBlock = document.createElement('div');
+          newBlock.className = `block ${block.shape_type}`;
+          newBlock.style.left = `${block.x_pos}px`;
+          newBlock.style.top = `${block.y_pos}px`;
+          newBlock.style.backgroundColor = block.color || '#FFA500';
+          newBlock.dataset.shape = block.shape_type;
+          newBlock.style.transform = `rotate(${block.rotation_degree}deg)` +
+            (block.shape_type === 'parallelogram' ? ' skew(-30deg)' : '');
+
+          makeDraggableAndRotatable(newBlock);
+          canvas.appendChild(newBlock);
+          currentBlockCount++;
+        });
       } catch (err) {
-        console.error("키워드 수 조회 실패:", err);
+        console.error("블록 맵 로딩 실패:", err);
       }
     }
+  });
 
-    fetchKeywordCount();
+  function addShape(type) {
+    if (currentBlockCount >= currentKeywordCount) {
+      alert("오늘 입력한 키워드 수만큼만 블록을 생성할 수 있습니다.");
+      return;
+    }
 
-    function addShape(type) {
-      if (currentBlockCount >= currentKeywordCount) {
-        alert("오늘 입력한 키워드 수만큼만 블록을 생성할 수 있습니다.");
-        return;
+    const canvas = document.querySelector('.canvas');
+    const newBlock = document.createElement('div');
+    newBlock.className = `block ${type}`;
+    newBlock.style.left = '100px';
+    newBlock.style.top = '100px';
+    newBlock.style.transform = '';
+    newBlock.dataset.shape = type;
+
+    makeDraggableAndRotatable(newBlock);
+    canvas.appendChild(newBlock);
+
+    currentBlockCount++;
+  }
+
+  function makeDraggableAndRotatable(block) {
+    let angle = 0;
+    let dragged = false;
+
+    block.addEventListener('click', () => {
+      if (dragged) return;
+      angle = (angle + 45) % 360;
+      block.style.transform = `rotate(${angle}deg)`;
+      if (block.classList.contains('parallelogram')) {
+        block.style.transform += ' skew(-30deg)';
       }
-
-      const canvas = document.querySelector('.canvas');
-      const newBlock = document.createElement('div');
-
-      newBlock.className = `block ${type}`;
-      newBlock.style.left = '100px';
-      newBlock.style.top = '100px';
-      newBlock.style.transform = '';
-      newBlock.dataset.shape = type;
-
-      makeDraggableAndRotatalbe(newBlock);
-      canvas.appendChild(newBlock);
-
-      currentBlockCount++;
-    }
-
-    document.querySelectorAll('.block').forEach(makeDraggableAndRotatalbe);
-
-    function makeDraggableAndRotatalbe(block) {
-      let angle = 0;
-      let dragged = false;
-
-      block.addEventListener('click', (e) => {
-        if (dragged) return;
-        angle = (angle + 45) % 360;
-        block.style.transform = `rotate(${angle}deg)`;
-        if (block.classList.contains('parallelogram')) {
-          block.style.transform += ' skew(-30deg)';
-        }
-      });
-
-      block.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        const shiftX = e.clientX - block.offsetLeft;
-        const shiftY = e.clientY - block.offsetTop;
-        dragged = false;
-
-        function onMouseMove(e) {
-          block.style.left = e.clientX - shiftX + 'px';
-          block.style.top = e.clientY - shiftY + 'px';
-          dragged = true;
-        }
-
-        function onMouseUp() {
-          document.removeEventListener('mousemove', onMouseMove);
-          document.removeEventListener('mouseup', onMouseUp);
-        }
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-      });
-
-      block.ondragstart = () => false;
-    }
-
-    function extractBlockData() {
-      const blocks = document.querySelectorAll('.block');
-      const blockDataList = [];
-
-      blocks.forEach((block) => {
-        const style = window.getComputedStyle(block);
-        const transform = style.transform;
-
-        let rotation = 0;
-        if (transform && transform !== 'none') {
-          const match = transform.match(/rotate\(([-\d.]+)deg\)/);
-          if (match) rotation = parseFloat(match[1]);
-        }
-
-        const x = parseInt(block.style.left || 0);
-        const y = parseInt(block.style.top || 0);
-        const shapeType = block.dataset.shape || "unknown";
-
-        const blockData = {
-          page_id : pageId,
-          shape_type : shapeType,
-          position : { x, y },
-          rotation : rotation,
-          created_at : new Date().toISOString(),
-          user_id : userId
-        };
-
-        blockDataList.push(blockData);
-      });
-
-      return blockDataList;
-    }
-
-    document.getElementById('saveBtn').addEventListener('click',() => {
-      const blockData = extractBlockData(userId, pageId);
-
-      fetch('/save-blocks', {
-        method: 'POST',
-        headers: {'Content-Type' : 'application/json'},
-        body: JSON.stringify(blockData)
-      })
-      .then(res => res.text())
-      .then(msg => alert(msg))
-      .catch(err => {
-        console.error('저장 오류: ', err);
-        alert('저장 실패');
-      });
     });
-  </script>
+
+    block.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const shiftX = e.clientX - block.offsetLeft;
+      const shiftY = e.clientY - block.offsetTop;
+      dragged = false;
+
+      function onMouseMove(e) {
+        block.style.left = `${e.clientX - shiftX}px`;
+        block.style.top = `${e.clientY - shiftY}px`;
+        dragged = true;
+      }
+
+      function onMouseUp() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    block.ondragstart = () => false;
+  }
+
+  function extractBlockData() {
+    const blocks = document.querySelectorAll('.block');
+    return Array.from(blocks).map(block => {
+      const style = window.getComputedStyle(block);
+      const transform = style.transform;
+      let rotation = 0;
+      const match = transform.match(/rotate\\(([-\\d.]+)deg\\)/);
+      if (match) rotation = parseFloat(match[1]);
+
+      return {
+        shape_type: block.dataset.shape,
+        color: style.backgroundColor || '#FFA500',
+        x_pos: parseInt(block.style.left || 0),
+        y_pos: parseInt(block.style.top || 0),
+        rotation_degree: rotation,
+        created_at: new Date().toISOString(),
+        keyword_id: null  // 키워드 연동 안함
+      };
+    });
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const blockDataList = extractBlockData();
+
+    try {
+      const res = await fetch('/save-blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          blockDataList,
+          map_id: mapId,
+          user_id: userId
+        })
+      });
+
+      if (!res.ok) throw new Error('서버 오류');
+      const msg = await res.text();
+      alert(msg);
+    } catch (err) {
+      console.error("저장 실패:", err);
+      alert("저장에 실패했습니다.");
+    }
+  });
+</script>
+
 </body>
 </html>
