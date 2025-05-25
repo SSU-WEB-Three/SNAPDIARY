@@ -104,7 +104,7 @@
 
         let rotation = 0;
         if (transform && transform !== 'none') {
-          transform.match(/rotate\(([-\d.]+)deg\)/);
+          const match = transform.match(/rotate\(([-\d.]+)deg\)/);
           if (match) rotation = parseFloat(match[1]);
         }
 

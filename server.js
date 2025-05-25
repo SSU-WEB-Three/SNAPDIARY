@@ -18,6 +18,8 @@ app.use(session({
     resave: false,
     saveUninitialized: true
 }));
+//몽구스 모델 연결
+const Block = require('./models/Block');
 
 // MongoDB 연결
 connectDB();
@@ -72,22 +74,21 @@ app.post('/login', (req, res) => {
 });
 
 //블록 저장
-app.post('/save-blocks',(req, res) => {
+app.post('/save-blocks', async (req, res) => {
     const blockList = req.body;
 
     if(!Array.isArray(blockList)) {
         return res.status(400).send('데이터 형식 오류:배열이 아닙니다.');
     }
 
-    mydb.collection('blocks').insertMany(blockList)
-     .then(result => {
-        console.log('블록 저장 완료: ', result.insertedCount, '개');
-        res.status(200).send('블록 저장 성공!');
-     })
-     .catch(err => {
-        console.error('블록 저장 오류: ', err);
+    try {
+        const result = await Block.insertMany(blockList);
+        console.log('블록 저장 완료: ', result.length,'개');
+        res.status(200).send('블록 저장 성공');
+    } catch (err) {
+        console.error('블록 저장 실패:', err.message);
         res.status(500).send('블록 저장 실패');
-     });
+    }
 });
 
 //
