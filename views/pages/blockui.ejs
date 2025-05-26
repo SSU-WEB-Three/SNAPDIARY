@@ -126,25 +126,34 @@
   }
 
   function extractBlockData() {
-    const blocks = document.querySelectorAll('.block');
-    return Array.from(blocks).map(block => {
-      const style = window.getComputedStyle(block);
-      const transform = style.transform;
-      let rotation = 0;
-      const match = transform.match(/rotate\\(([-\\d.]+)deg\\)/);
-      if (match) rotation = parseFloat(match[1]);
+  const blocks = document.querySelectorAll('.block');
+  return Array.from(blocks).map(block => {
+    const style = window.getComputedStyle(block);
+    const transform = style.transform;
+    let rotation = 0;
 
-      return {
-        shape_type: block.dataset.shape,
-        color: style.backgroundColor || '#FFA500',
-        x_pos: parseInt(block.style.left || 0),
-        y_pos: parseInt(block.style.top || 0),
-        rotation_degree: rotation,
-        created_at: new Date().toISOString(),
-        keyword_id: null  // 키워드 연동 안함
-      };
-    });
-  }
+    if (transform && transform !== 'none') {
+      const values = transform.match(/matrix\(([^)]+)\)/);
+      if (values) {
+        const parts = values[1].split(', ');
+        const a = parseFloat(parts[0]);
+        const b = parseFloat(parts[1]);
+        rotation = Math.round(Math.atan2(b, a) * (180 / Math.PI));
+      }
+    }
+
+    return {
+      shape_type: block.dataset.shape,
+      color: style.backgroundColor || '#FFA500',
+      x_pos: parseInt(block.style.left || 0),
+      y_pos: parseInt(block.style.top || 0),
+      rotation_degree: rotation,
+      created_at: new Date().toISOString(),
+      keyword_id: null
+    };
+  });
+}
+
 
   document.getElementById('saveBtn').addEventListener('click', async () => {
     const blockDataList = extractBlockData();
