@@ -102,6 +102,36 @@ app.post('/api/diary/save', async (req, res) => {
   res.send('저장 완료');
 });
 
+app.post('/api/generate-diary', async (req, res) => {
+  const { messages } = req.body;
+
+  if (!messages) return res.status(400).json({ error: '대화 내용 누락' });
+
+  try {
+    const prompt = `
+아래는 사용자의 하루 대화 기록입니다. 이를 바탕으로 하루 일기를 작성해 주세요.
+
+${messages}
+
+일기 형식으로, 하루를 정리하는 부드럽고 따뜻한 문장으로 작성해주세요.
+`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 300,
+      temperature: 0.7
+    });
+
+    const diary = completion.choices[0].message.content.trim();
+    res.json({ diary });
+  } catch (err) {
+    console.error('일기 생성 실패:', err.message);
+    res.status(500).json({ error: 'OpenAI 오류' });
+  }
+});
+
+
 app.get('/api/diary/:user_id/:date', async (req, res) => {
   const entries = await DiaryEntry.find({ user_id: req.params.user_id, date: req.params.date });
   res.json(entries);
@@ -231,6 +261,27 @@ app.post('/api/chatlog', async (req, res) => {
   const log = await ChatLog.create({ user_id, message, sender });
   res.json({ success: true, data: log });
 });
+
+app.get('/api/chatlog/:user_id/:date', async (req, res) => {
+  const { user_id, date } = req.params;
+
+  try {
+    const start = new Date(new Date(date).setHours(0, 0, 0, 0) - (9 * 60 * 60 * 1000));
+    const end = new Date(new Date(date).setHours(23, 59, 59, 999) - (9 * 60 * 60 * 1000));
+
+    const logs = await ChatLog.find({
+      user_id,
+      timestamp: { $gte: start, $lte: end }
+    }).sort({ timestamp: 1 });
+
+    res.json(logs);
+  } catch (err) {
+    console.error('ChatLog 조회 실패:', err.message);
+    res.status(500).send('조회 실패');
+  }
+});
+
+
 
 // ─── 서버 실행 ────────────────────────────────────────────────
 app.listen(PORT, () => {

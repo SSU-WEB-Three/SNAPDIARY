@@ -104,7 +104,8 @@
             <input type="hidden" id="editIndex" />
           </div>
           <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">저장</button>
+        <button type="button" id="generateDiaryBtn" class="btn btn-primary">일기 만들기</button>
+        <button type="submit" class="btn btn-primary">저장</button>
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
           </div>
         </form>
@@ -304,6 +305,39 @@
         resultsEl.appendChild(li);
       });
     });
+
+document.getElementById('generateDiaryBtn').addEventListener('click', async () => {
+  const dateStr = new Date().toISOString().slice(0, 10); 
+  try {
+    const res = await fetch(`/api/chatlog/${userId}/${dateStr}`);
+    const logs = await res.json();
+
+    if (!Array.isArray(logs) || logs.length === 0) {
+      alert("해당 날짜의 대화 기록이 없습니다.");
+      return;
+    }
+
+    const combinedMessages = logs.map(log => `${log.sender === 'user' ? '사용자' : 'GPT'}: ${log.message}`).join('\n');
+
+    const gptRes = await fetch('/api/generate-diary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: combinedMessages })
+    });
+
+    const data = await gptRes.json();
+    if (data.diary) {
+      document.getElementById('entryText').value = data.diary;
+    } else {
+      alert("일기 생성 실패");
+    }
+  } catch (err) {
+    console.error("일기 생성 오류:", err);
+    alert("서버 오류 발생");
+  }
+});
+
+
   </script>
 </body>
 </html>
