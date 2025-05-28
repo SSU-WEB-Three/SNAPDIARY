@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title><%= map.user_id?.usernickname || '익명' %>님의 블록맵</title>
+  <link rel="stylesheet" href="/css/blockview.css">
+  <style>
+   
+    h1 {
+      font-size: 1.8rem;
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+
+    p.date {
+      color: #888;
+      font-size: 0.95rem;
+      margin-bottom: 30px;
+    }
+
+
+    .readonly-canvas {
+      justify-content: flex-start;
+      width: 400px;
+      height: 400px;
+      background-color: #ffffff;
+      border: 1px solid #ccc;
+      position: relative;
+      margin: 0 auto;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .block {
+      position: absolute;
+      opacity: 0.9;
+      transform-origin: center;
+    }
+
+    .triangle.large {
+      width: 120px;
+      height: 120px;
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+    }
+
+    .triangle.small {
+      width: 60px;
+      height: 60px;
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+    }
+
+    .square {
+      width: 60px;
+      height: 60px;
+    }
+
+    .parallelogram {
+      width: 120px;
+      height: 60px;
+    }
+  </style>
+</head>
+<body>
+  <h1><%= map.user_id?.usernickname || '익명' %>님의 <%= new Date(map.created_at).toLocaleDateString('ko-KR') %> 블록맵</h1>
+  <p class="date"><%= new Date(map.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+
+  <div id="canvas" class="readonly-canvas">
+    <% map.block_id.forEach(block => {
+         const size = block.shape_type.includes('large') ? 160
+                    : block.shape_type === 'parallelogram' ? 160
+                    : 80;
+         const height = block.shape_type === 'parallelogram' ? 80 : size;
+         const left = Math.min(block.x_pos / 2, 400 - size);
+         const top = Math.min(block.y_pos / 2, 400 - height);
+    %>
+      <div class="block <%= block.shape_type %>"
+        style="
+          left:<%= left %>px;
+          top:<%= top %>px;
+          background:<%= block.color %>;
+          transform:rotate(<%= block.rotation_degree %>deg)<%= block.shape_type === 'parallelogram' ? ' skew(-30deg)' : '' %>;
+        ">
+      </div>
+    <% }) %>
+  </div>
+</body>
+</html>

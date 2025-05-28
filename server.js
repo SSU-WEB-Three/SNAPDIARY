@@ -196,18 +196,25 @@ app.get('/api/blockmap/:mapId', async (req, res) => {
 
 app.get('/api/blockmap-by-date/:user_id/:date', async (req, res) => {
   const { user_id, date } = req.params;
+
   try {
-    const start = new Date(new Date(date).setHours(0, 0, 0, 0) - 9 * 3600000);
-    const end = new Date(new Date(date).setHours(23, 59, 59, 999) - 9 * 3600000);
+    const start = new Date(`${date}T00:00:00.000+09:00`);
+    const end = new Date(`${date}T23:59:59.999+09:00`);
 
     const map = await BlockMap.findOne({
-      user_id,
+      user_id, // 반드시 ObjectId로 저장된 값이어야 함
       created_at: { $gte: start, $lte: end }
     }).populate('block_id');
 
-    if (!map) return res.status(404).send('해당 날짜 맵 없음');
-    res.json(map);
+    if (!map) {
+      console.log("해당 날짜에 블록맵 없음");
+      return res.status(404).send('해당 날짜 맵 없음');
+    }
+
+    console.log("기존 블록맵 있음 → map_id:", map.map_id);
+    res.json(map); // map.map_id 포함된 전체 블록맵 응답
   } catch (err) {
+    console.error('블록맵 조회 실패:', err);
     res.status(500).send('서버 오류');
   }
 });
@@ -286,4 +293,79 @@ app.get('/api/chatlog/:user_id/:date', async (req, res) => {
 // ─── 서버 실행 ────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
+});
+
+
+
+app.get('/api/community/recent', async (req, res) => {
+  try {
+    const recentMaps = await BlockMap.find()
+      .sort({ created_at: -1 })
+      .limit(5)
+      .populate('user_id');
+
+    res.json(recentMaps);
+  } catch (err) {
+    console.error("최근 커뮤니티 조회 오류:", err);
+    res.status(500).json({ error: "서버 오류" });
+  }
+});
+
+
+app.get('/blockview/:mapId', async (req, res) => {
+  try {
+    const map = await BlockMap.findOne({ map_id: req.params.mapId })
+      .populate('block_id')
+      .populate('user_id');
+
+    if (!map) return res.status(404).send('맵이 존재하지 않음');
+
+    res.render('pages/blockview', {
+  title: '블록맵 조회',
+  user: req.session.user || null,
+  map
+});
+  } catch (err) {
+    console.error('블록맵 조회 오류:', err);
+    res.status(500).send('서버 오류');
+  }
+});
+
+// 커뮤니티 페이지 (6개씩 페이징)
+
+app.get('/community', async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = 6;
+  const skip = (page - 1) * limit;
+
+  const total = await BlockMap.countDocuments();
+  const maps = await BlockMap.find()
+    .sort({ created_at: -1 })
+    .skip(skip)
+    .limit(limit)
+    .populate('user_id'); // 사용자 닉네임 포함되게
+
+  // 각 map에 대해 키워드와 일기 추가
+  const entries = await Promise.all(
+    maps.map(async (map) => {
+      const date = map.date || map.created_at.toISOString().slice(0, 10);
+
+      const keywords = await Keyword.find({ user_id: map.user_id._id, date });
+      const diary = await DiaryEntry.findOne({ user_id: map.user_id._id.toString(), date });
+
+      return {
+        ...map.toObject(),  // map의 기본 정보
+        keywords: keywords.map(k => k.keyword),
+        diary: diary ? diary.title : null
+      };
+    })
+  );
+
+  res.render('pages/community', {
+    title: '커뮤니티',
+     user: req.user || null,
+    entries,
+    currentPage: page,
+    totalPages: Math.ceil(total / limit)
+  });
 });
