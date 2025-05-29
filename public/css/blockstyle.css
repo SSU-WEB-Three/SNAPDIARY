@@ -21,13 +21,13 @@
       flex-direction: column;
     }
 
-    .header {
+    .header1 {
       height: 50px;
-      background-color: #ddd;
       display: flex;
       align-items: center;
       padding-left: 20px;
       font-weight: bold;
+      background-color: #ddd;
       color: #444;
     }
 
