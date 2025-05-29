@@ -103,7 +103,7 @@
         block.style.transform += ' skew(-30deg)';
       }
 
-      createDeleteButton();
+      createDeleteButton(block);
     });
 
 
@@ -184,6 +184,10 @@
     }
   });
 
+  document.addEventListener('click', () => {
+      remove_exist_delete_btn();
+  });
+
   function createDeleteButton(targetBlock) {
     remove_exist_delete_btn();
 
@@ -191,8 +195,8 @@
     deleteBtn.innerText = 'x';
     deleteBtn.className = 'delete-btn';
 
-    deleteBtn.style.left = '${targetBlock.offsetLeft + targetBlock.offsetTop - 10}px';
-    deleteBtn.style.top = '${targetBlock.offsetTop - 10}px';
+    deleteBtn.style.left = `200px`;
+    deleteBtn.style.top = `200px`;
 
     deleteBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -201,22 +205,10 @@
       currentBlockCount--;
     });
 
-    function remove_exist_delete_btn() {
-    const exist_btn = document.querySelector('.delete-btn');
-    if (exist_btn){
-      exist_btn.remove();
-    }
-  }
-
-
-
     document.querySelector('.canvas').appendChild(deleteBtn);
   }
 
 
-  document.addEventListener('click', () => {
-      remove_exist_delete_btn();
-    });
 </script>
 
 </body>

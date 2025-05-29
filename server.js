@@ -64,12 +64,26 @@ app.get('/blockui/:mapId', (req, res) => {
     userId: req.session.user.user_id
   });
 });
+app.get('/agree', (req, res) => {
+  res.render('pages/agree', { layout: false, error: null, user: req.session.user || null });
+});
+
 
 // ─── 회원가입 / 로그인 ────────────────────────────────────────────────
 app.post('/register', async (req, res) => {
   const { useremail, userpassword, username, userphone, usernickname, userbirth } = req.body;
   const exists = await Account.findOne({ useremail });
   if (exists) return res.render('pages/register', { layout: false, error: "이미 가입된 이메일입니다." });
+  if (typeof userpassword !== 'string' || userpassword.length < 6 || userpassword.length > 20) {
+    return res.status(400).send('비밀번호는 6~20자여야 합니다.');
+  };
+  if (!username || !/^[가-힣]{2,10}$/.test(username)) {
+    return res.status(400).send('이름은 한글 2~10자만 가능합니다.');
+  };
+  if (!userphone || !/^[0-9]{10,11}$/.test(userphone)) {
+    return res.status(400).send('전화번호는 숫자만 입력해야 합니다.');
+  }
+
 
   const hashedpw = await bcrypt.hash(userpassword, 10);
   await Account.create({ useremail, userpassword: hashedpw, username, userphone, usernickname, userbirth });
