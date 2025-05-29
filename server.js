@@ -184,6 +184,24 @@ app.post('/save-blocks', async (req, res) => {
   }
 });
 
+//블록 삭제 코드 (수정가능)
+app.post("/delete-block", async (req, res) => {
+  const { block_id } = req.body;
+  if (!block_id) {
+    return res.status(400).send('block_id 누락');
+  }
+  try {
+    await Block.findByIdAndDelete(block_id);
+    await BlockMap.updateMany(
+      {block_id: block_id},
+      { $pull: {block_id: block_id} }
+    );
+  } catch (err) {
+    console.error("삭제 실패: ",err.message);
+    res.status(500).send("삭제실패");
+  }
+});
+
 app.get('/api/blockmap/:mapId', async (req, res) => {
   try {
     const map = await BlockMap.findOne({ map_id: req.params.mapId }).populate('block_id');
