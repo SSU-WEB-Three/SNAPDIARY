@@ -16,7 +16,7 @@
       <button onclick="addShape('parallelogram')">평행사변형</button>
     </div>
     <div class="main">
-      <div class="header">블록 배치하기</div>
+      <div class="header1">블록 배치하기</div>
       <div class="canvas"></div>
     </div>
   </div>
@@ -92,14 +92,20 @@
     let angle = 0;
     let dragged = false;
 
-    block.addEventListener('click', () => {
+    block.addEventListener('click', (e) => {
+      e.stopPropagation();
+
       if (dragged) return;
+
       angle = (angle + 45) % 360;
       block.style.transform = `rotate(${angle}deg)`;
       if (block.classList.contains('parallelogram')) {
         block.style.transform += ' skew(-30deg)';
       }
+
+      createDeleteButton();
     });
+
 
     block.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -177,6 +183,40 @@
       alert("저장에 실패했습니다.");
     }
   });
+
+  function createDeleteButton(targetBlock) {
+    remove_exist_delete_btn();
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.innerText = 'x';
+    deleteBtn.className = 'delete-btn';
+
+    deleteBtn.style.left = '${targetBlock.offsetLeft + targetBlock.offsetTop - 10}px';
+    deleteBtn.style.top = '${targetBlock.offsetTop - 10}px';
+
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      targetBlock.remove();
+      deleteBtn.remove();
+      currentBlockCount--;
+    });
+
+    function remove_exist_delete_btn() {
+    const exist_btn = document.querySelector('.delete-btn');
+    if (exist_btn){
+      exist_btn.remove();
+    }
+  }
+
+
+
+    document.querySelector('.canvas').appendChild(deleteBtn);
+  }
+
+
+  document.addEventListener('click', () => {
+      remove_exist_delete_btn();
+    });
 </script>
 
 </body>

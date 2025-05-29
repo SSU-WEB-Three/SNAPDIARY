@@ -21,13 +21,13 @@
       flex-direction: column;
     }
 
-    .header {
+    .header1 {
       height: 50px;
-      background-color: #ddd;
       display: flex;
       align-items: center;
       padding-left: 20px;
       font-weight: bold;
+      background-color: #ddd;
       color: #444;
     }
 
@@ -115,4 +115,21 @@
 
   #saveBtn:hover {
     background-color: #f3edff;
+  }
+
+  .delete_btn {
+    position:absolute;
+    width: 20px;
+    height: 20px;
+    background: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    z-index: 10;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }

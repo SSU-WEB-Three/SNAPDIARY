@@ -32,10 +32,44 @@
             </div>
             <div class="small-card">
                 <div class="card-header"></div>
-                <p>커뮤니티</p>
+                <p>최근 커뮤니티</p>
+                <ul id="recent-community-list"></ul>
             </div>
         </div>
     </div>
+
+    <script>
+async function loadRecentCommunities() {
+  try {
+    const response = await fetch('/api/community/recent');
+    const data = await response.json();
+
+    const listContainer = document.getElementById('recent-community-list');
+    listContainer.innerHTML = '';
+
+    data.forEach(map => {
+      const name = map.user_id?.username || '익명';
+      const date = new Date(map.created_at).toLocaleDateString("ko-KR", {
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      });
+
+      const li = document.createElement('li');
+          li.innerHTML = `
+        <a href="/blockview/${map.map_id}" style="text-decoration: none; color: inherit;">
+          <strong>${name}</strong> 님의 블록 맵 <small>${date}</small>
+        </a>
+      `;
+      listContainer.appendChild(li);
+    });
+  } catch (err) {
+    console.error("최근 커뮤니티 불러오기 실패:", err);
+    document.getElementById('recent-community-list').innerHTML = "<li>불러오기 실패</li>";
+  }
+}
+document.addEventListener("DOMContentLoaded", () => {
+  loadRecentCommunities();
+});
+</script>
 
     <!-- 클라이언트 사이드 스크립트 -->
     <script>
