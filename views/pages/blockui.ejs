@@ -195,8 +195,8 @@
     deleteBtn.innerText = 'x';
     deleteBtn.className = 'delete-btn';
 
-    deleteBtn.style.left = `200px`;
-    deleteBtn.style.top = `200px`;
+    deleteBtn.style.left = `${targetBlock.offsetLeft + targetBlock.offsetWidth - 10}px`;
+    deleteBtn.style.top = `${targetBlock.offsetTop - 10}px`;
 
     deleteBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -208,6 +208,10 @@
     document.querySelector('.canvas').appendChild(deleteBtn);
   }
 
+  function remove_exist_delete_btn() {
+    const existBtn = document.querySelector('.delete-btn');
+    if (existBtn) existBtn.remove();
+  }
 
 </script>
 
