@@ -17,16 +17,16 @@
       <input type="email" id="useremail" name="useremail" placeholder="이메일 입력" required>
 
       <label for="password">비밀번호</label>
-      <input type="password" id="userpassword" name="userpassword" placeholder="영어, 숫자, 특수문자 포함 6 ~ 20자" required>
+      <input type="password" id="userpassword" name="userpassword" minlength="6" maxlength="20" placeholder="영어, 숫자, 특수문자 포함 6~20자" required>
     
       <label for="passwordConfirm">비밀번호 확인</label>
-      <input type="password" id="passwordConfirm" name="passwordConfirm" placeholder="영어, 숫자, 특수문자 포함 6 ~ 20자" required>
+      <input type="password" id="passwordConfirm" name="passwordConfirm" minlength="6" maxlength="20" placeholder="영어, 숫자, 특수문자 포함 6~20자" required>
 
       <label for="name">이름</label>
-      <input type="text" id="username" name="username" placeholder="이름 입력" required>
+      <input type="text" id="username" name="username" pattern="^[가-힣]{2,10}$" placeholder="이름 입력 ( 한글 2~10자 )" required>
 
       <label for="phone">전화번호</label>
-      <input type="tel" id="userphone" name="userphone" placeholder="전화번호 입력 ( - 제외 )" required>
+      <input type="tel" id="userphone" name="userphone" pattern="^[0-9]{10,11}$" placeholder="전화번호 입력 ( - 제외 )" required>
 
       <label for="nickname">닉네임</label>
       <input type="text" id="usernickname" name="usernickname" placeholder="닉네임 입력" required>
@@ -36,7 +36,7 @@
 
       <div class="checkbox-row">
         <label><input type="checkbox" id="agree" required> 개인정보 수집 및 이용에 동의합니다.</label>
-        <a href="#">약관 보기 &gt;</a>
+        <a href="/agree">약관 보기 &gt;</a>
       </div>
 
       <button type="submit">회원가입</button>
