@@ -45,9 +45,15 @@ app.get('/', (req, res) => {
 app.get('/login', (req, res) => res.render('pages/login', { layout: false, error: null, user: req.session.user || null }));
 app.get('/register', (req, res) => res.render('pages/register', { layout: false, error: null, user: req.session.user || null }));
 app.get('/register/success', (req, res) => res.render('pages/register-success', { layout: false, user: req.session.user || null }));
-app.get('/mypage', (req, res) => {
+app.get('/mypage', async (req, res) => {
   if (!req.session.user) return res.redirect('/login');
-  res.render('pages/mypage', { title: '마이 페이지', user: req.session.user, userId: req.session.user.user_id });
+  const user = await Account.findById(req.session.user.user_id);
+  res.render('pages/mypage', {
+    title: '마이 페이지',
+    user: req.session.user,
+    userId: req.session.user.user_id,
+    profileImage: user.profileImage || '/uploads/default.png'
+  });
 });
 app.get('/blockui/:mapId', (req, res) => {
   if (!req.session.user) return res.redirect('/login');
@@ -386,4 +392,36 @@ app.get('/community', async (req, res) => {
     currentPage: page,
     totalPages: Math.ceil(total / limit)
   });
+});
+
+const path = require('path');
+const multer = require('multer');
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/uploads/');
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    const filename = `${Date.now()}-${file.originalname}`;
+    cb(null, filename);
+  }
+});
+const upload = multer({ storage });
+
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
+app.post('/api/upload-profile/:user_id', upload.single('profileImage'), async (req, res) => {
+  const userId = req.params.user_id;
+  if (!req.file) return res.status(400).json({ error: '파일 없음' });
+
+  const imagePath = `/uploads/${req.file.filename}`;
+
+  try {
+    await Account.findByIdAndUpdate(userId, { profileImage: imagePath });
+    res.json({ url: imagePath });
+  } catch (err) {
+    console.error("프로필 업데이트 실패:", err);
+    res.status(500).json({ error: '서버 오류' });
+  }
 });

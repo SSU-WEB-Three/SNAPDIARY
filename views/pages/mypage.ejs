@@ -70,25 +70,31 @@
   console.log("userId 확인:", userId); 
 </script>
 
-  <div class="container mt-4">
-    <div class="row">
-      <div class="col-md-4">
-        <div class="profile text-center mb-3">
-          <img src="https://play-lh.googleusercontent.com/38AGKCqmbjZ9OuWx4YjssAz3Y0DTWbiM5HB0ove1pNBq_o9mtWfGszjZNxZdwt_vgHo=w480-h960-rw" alt="프로필 사진" />
-          <hr>
-          <p class="mt-2">안녕하세요!<br>이곳은 나의 하루 일기장이에요.</p>
-        </div>
-        <input type="date" id="datePicker" class="form-control mb-2" />
-        <button id="writeBtn" class="btn btn-primary w-100 mb-3">작성하기</button>
-        <input type="text" id="searchInput" class="form-control mb-2" placeholder="일기 내용 검색..." />
-        <ul id="searchResults" class="list-group"></ul>
-      </div>
-      <div class="col-md-8">
-        <div id="grassChart" class="grass-chart"></div>
-        <div id="cardContainer"></div>
-      </div>
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-4">
+      <div class="profile text-center mb-3">
+    <div class="profile text-center mb-4">
+      <img id="profileImage" src="<%= profileImage %>" alt="프로필 사진" ... />
+      <hr>
+      <p class="mt-2">안녕하세요!<br>이곳은 나의 하루 일기장이에요.</p>
+      <button class="btn btn-outline-primary mt-2" onclick="document.getElementById('profileInput').click()">사진 업로드</button>
+      <form id="profileForm" enctype="multipart/form-data">
+        <input type="file" id="profileInput" name="profileImage" accept="image/*" style="display: none" />
+      </form>
     </div>
-  </div>
+      <input type="date" id="datePicker" class="form-control mb-2" />
+      <button id="writeBtn" class="btn btn-primary w-100 mb-3">작성하기</button>
+      <input type="text" id="searchInput" class="form-control mb-2" placeholder="일기 내용 검색..." />
+      <ul id="searchResults" class="list-group"></ul>
+    </div>
+</div>
+    <div class="col-md-8">
+      <div id="grassChart" class="grass-chart"></div>
+      <div id="cardContainer"></div>
+    </div>
+</div>
+</div>
 
   <!-- 작성 모달 -->
   <div class="modal fade" id="entryModal" tabindex="-1">
@@ -148,6 +154,7 @@
     const viewDate = document.getElementById("viewDate");
     const viewContent = document.getElementById("viewContent");
     const viewViews = document.getElementById("viewViews");
+
 
     window.addEventListener("DOMContentLoaded", async () => {
       const today = new Date().toISOString().split("T")[0];
@@ -336,6 +343,24 @@ document.getElementById('generateDiaryBtn').addEventListener('click', async () =
     alert("서버 오류 발생");
   }
 });
+
+//프로필 사진등록
+  document.getElementById('profileInput').addEventListener('change', async function () {
+    const formData = new FormData(document.getElementById('profileForm'));
+    const userId = "<%= userId %>"; // EJS에서 사용자 ID 전달됨
+
+    const res = await fetch(`/api/upload-profile/${userId}`, {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await res.json();
+    if (data.url) {
+      document.getElementById('profileImage').src = data.url;
+    } else {
+      alert('업로드 실패');
+    }
+  });
 
 
   </script>
