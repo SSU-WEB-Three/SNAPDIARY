@@ -44,6 +44,26 @@
       position: absolute;
       opacity: 0.9;
       transform-origin: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: visible;
+      color: white;
+      font-size: 14px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .block span {
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: white;
+      white-space: nowrap;
+      z-index: 10;
+      pointer-events: none;
     }
 
     .triangle.large {
@@ -66,6 +86,37 @@
     .parallelogram {
       width: 120px;
       height: 60px;
+    }
+
+    .block.circle {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+    }
+
+    .block.star {
+      width: 0;
+      height: 0;
+      position: relative;
+    }
+
+    .block.star::before,
+    .block.star::after {
+      content: "";
+      position: absolute;
+      display: block;
+      width: 0;
+      height: 0;
+      border-left: 30px solid transparent;
+      border-right: 30px solid transparent;
+      border-bottom: 50px solid gold;
+      top: 0;
+      left: -30px;
+      transform: rotate(35deg);
+    }
+
+    .block.star::after {
+      transform: rotate(-35deg);
     }
 
     .diary-section {
@@ -114,27 +165,30 @@
     </section>
   <% } %>
 
-     <section class="diary-section">
-      <h2 style="font-size: 1.5rem; margin-bottom: 20px; color: #2c3e50; text-align: center;">블록 배치표</h2>
-  <div id="canvas" class="readonly-canvas">
-    <% map.block_id.forEach(block => {
-         const size = block.shape_type.includes('large') ? 160
-                    : block.shape_type === 'parallelogram' ? 160
-                    : 80;
-         const height = block.shape_type === 'parallelogram' ? 80 : size;
-         const left = Math.min(block.x_pos / 2, 400 - size);
-         const top = Math.min(block.y_pos / 2, 400 - height);
-    %>
-      <div class="block <%= block.shape_type %>"
-        style="
-          left:<%= left %>px;
-          top:<%= top %>px;
-          background:<%= block.color %>;
-          transform:rotate(<%= block.rotation_degree %>deg)<%= block.shape_type === 'parallelogram' ? ' skew(-30deg)' : '' %>;
-        ">
-      </div>
-    <% }) %>
-  </div>
+  <section class="diary-section">
+    <h2 style="font-size: 1.5rem; margin-bottom: 20px; color: #2c3e50; text-align: center;">블록 배치표</h2>
+    <div id="canvas" class="readonly-canvas">
+      <% map.block_id.forEach(block => {
+           const size = block.shape_type.includes('large') ? 160
+                      : block.shape_type === 'parallelogram' ? 160
+                      : 80;
+           const height = block.shape_type === 'parallelogram' ? 80 : size;
+           const left = Math.min(block.x_pos / 2, 400 - size);
+           const top = Math.min(block.y_pos / 2, 400 - height);
+      %>
+        <div class="block <%= block.shape_type %>"
+          style="
+            left:<%= left %>px;
+            top:<%= top %>px;
+            background:<%= block.color %>;
+            transform:rotate(<%= block.rotation_degree %>deg)<%= block.shape_type === 'parallelogram' ? ' skew(-30deg)' : '' %>;
+          ">
+          <% if (block.tag) { %>
+            <span><%= block.tag %></span>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
   </section>
 
 </body>
