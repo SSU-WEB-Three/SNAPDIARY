@@ -14,6 +14,8 @@ const Keyword = require('./models/Keyword');
 const Block = require('./models/Block');
 const BlockMap = require('./models/BlockMap');
 const ChatLog = require('./models/ChatLog');
+const cron = require('node-cron');
+
 
 connectDB();
 const app = express();
@@ -475,5 +477,89 @@ app.post('/api/upload-profile/:user_id', upload.single('profileImage'), async (r
   } catch (err) {
     console.error("프로필 업데이트 실패:", err);
     res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+
+// 매일 밤 11시에 실행
+cron.schedule('0 23 * * *', async () => {
+  console.log("23:00 자동 일기 생성 시작");
+
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  try {
+    // 오늘 대화한 사용자 ID 목록 조회
+    const users = await ChatLog.distinct('user_id', {
+      timestamp: {
+        $gte: new Date(`${today}T00:00:00Z`),
+        $lte: new Date(`${today}T23:59:59Z`)
+      }
+    });
+
+    console.log(`오늘 대화한 사용자 수: ${users.length}명`);
+
+    for (const userId of users) {
+      const existingDiary = await DiaryEntry.findOne({ user_id: userId, date: today });
+
+      // title이 있으면 건너뜀
+      if (existingDiary && existingDiary.title) {
+        console.log(`${userId}님: 이미 제목 있는 일기 있음 → 건너뜀`);
+        continue;
+      }
+
+      // 해당 유저의 오늘 대화 로그 조회
+      const logs = await ChatLog.find({
+        user_id: userId,
+        timestamp: {
+          $gte: new Date(`${today}T00:00:00Z`),
+          $lte: new Date(`${today}T23:59:59Z`)
+        }
+      });
+
+      if (!logs.length) {
+        console.log(`${userId}님: 오늘 대화 없음 → 건너뜀`);
+        continue;
+      }
+
+      const combinedMessages = logs.map(log => `${log.sender === 'user' ? '사용자' : 'GPT'}: ${log.message}`).join('\n');
+
+      const prompt = `
+아래는 사용자의 하루 대화 기록입니다. 이를 바탕으로 하루 일기를 작성해 주세요.
+
+${combinedMessages}
+
+일기 형식으로, 하루를 정리하는 부드럽고 따뜻한 문장으로 작성해주세요.
+`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 300,
+        temperature: 0.7
+      });
+
+      const diaryText = completion.choices[0].message.content.trim();
+
+      if (existingDiary) {
+        // 기존 일기 문서가 있지만 title이 없는 경우 → 업데이트
+        existingDiary.title = diaryText;
+        existingDiary.generated = true;
+        await existingDiary.save();
+        console.log(`${userId}님: 기존 일기 title 채움`);
+      } else {
+        // 일기가 전혀 없으면 새로 생성
+        await DiaryEntry.create({
+          user_id: userId,
+          date: today,
+          title: diaryText,
+          generated: true
+        });
+        console.log(`${userId}님: 새 일기 생성`);
+      }
+    }
+
+    console.log("자동 일기 처리 완료");
+  } catch (err) {
+    console.error("자동 일기 생성 오류:", err.message);
   }
 });
