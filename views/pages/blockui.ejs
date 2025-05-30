@@ -22,6 +22,7 @@
     </div>
   </div>
 
+  
 <script>
   const userId = "<%= userId %>";
   const mapId = "<%= mapId %>";
@@ -56,8 +57,19 @@
           newBlock.style.top = `${block.y_pos}px`;
           newBlock.style.backgroundColor = block.color || '#FFA500';
           newBlock.dataset.shape = block.shape_type;
-          newBlock.style.transform = `rotate(${block.rotation_degree}deg)` +
-            (block.shape_type === 'parallelogram' ? ' skew(-30deg)' : '');
+          
+          const scale = block.scale || 1;
+          const rotation = block.rotation_degree || 0;
+          newBlock.style.transform = `scale(${scale}) rotate(${rotation}deg)` + (block.shape_type === 'parallelogram' ? ' skew(-30deg)' : '');
+          newBlock.dataset.scale = scale;
+          newBlock.dataset.rotation = rotation;
+          newBlock.dataset.tag = block.tag || '';
+
+          if (block.tag) {
+            const tagLabel = document.createElement('span');
+            tagLabel.textContent = block.tag;
+            newBlock.appendChild(tagLabel);
+          }
 
           makeDraggableAndRotatable(newBlock);
           canvas.appendChild(newBlock);
@@ -137,6 +149,8 @@
     if (block.classList.contains('parallelogram')) {
       block.style.transform += ' skew(-30deg)';
     }
+    block.dataset.scale = scale;
+    block.dataset.rotation = angle;
   }
 }
 
@@ -155,9 +169,8 @@
         const parts = values[1].split(', ');
         const a = parseFloat(parts[0]);
         const b = parseFloat(parts[1]);
-        const d = parseFloat(parts[3]);
         rotation = Math.round(Math.atan2(b, a) * (180 / Math.PI));
-        scale = Math.sqrt(a * a + b * b); // scaleX 계산
+        scale = Math.sqrt(a * a + b * b); // scaleX 기준
       }
     }
 
@@ -169,16 +182,14 @@
       color: style.backgroundColor || '#FFA500',
       x_pos: parseInt(block.style.left || 0),
       y_pos: parseInt(block.style.top || 0),
-      rotation_degree: rotation,
-      scale: scale,
-      tag: tag,
+      scale: parseFloat(block.dataset.scale || 1),
+      rotation_degree: parseInt(block.dataset.rotation || 0),
+      tag: block.dataset.tag || '',                 // ✅ 직접 추출한 값 사용
       created_at: new Date().toISOString(),
       keyword_id: null
     };
   });
 }
-
-
 
   document.getElementById('saveBtn').addEventListener('click', async () => {
     const blockDataList = extractBlockData();
@@ -233,19 +244,22 @@ function createOptionPanel(block) {
   };
 
   // 회전
-  let angle = 0;
+  let angle = parseInt(block.dataset.rotation || 0);
   panel.appendChild(createButton('🔁 회전', () => {
     angle = (angle + 45) % 360;
+    block.dataset.rotation = angle; // ✅ dataset 저장
     applyTransform();
   }));
 
   // 크기
-  let scaleIndex = 0;
   const scaleOptions = [1, 1.5, 2, 2.5, 3, 0.5];
-  let scale = scaleOptions[scaleIndex];
+  let scale = parseFloat(block.dataset.scale || 1);
+  let scaleIndex = scaleOptions.indexOf(scale);
+  if (scaleIndex === -1) scaleIndex = 0;
   panel.appendChild(createButton('↔️ 크기', () => {
     scaleIndex = (scaleIndex + 1) % scaleOptions.length;
     scale = scaleOptions[scaleIndex];
+    block.dataset.scale = scale; // ✅ dataset 저장
     applyTransform();
   }));
 
@@ -259,6 +273,7 @@ function createOptionPanel(block) {
     picker.click();
     picker.addEventListener('input', () => {
       block.style.backgroundColor = picker.value;
+      // 색상은 style에서 바로 가져오기 때문에 따로 dataset에 안 넣어도 됨
       picker.remove();
     });
     picker.addEventListener('blur', () => picker.remove());
@@ -266,16 +281,17 @@ function createOptionPanel(block) {
 
   // 태그
   panel.appendChild(createButton('🔠 태그', () => {
-  const tag = prompt("태그를 입력하세요");
-  if (tag) {
-    let label = block.querySelector('span');
-    if (!label) {
-      label = document.createElement('span');
-      block.appendChild(label);
+    const tag = prompt("태그를 입력하세요");
+    if (tag) {
+      let label = block.querySelector('span');
+      if (!label) {
+        label = document.createElement('span');
+        block.appendChild(label);
+      }
+      label.textContent = tag;
+      block.dataset.tag = tag; // ✅ dataset 저장
     }
-    label.textContent = tag;
-  }
-}));
+  }));
 
   // 삭제
   panel.appendChild(createButton('❌ 삭제', () => {
@@ -284,6 +300,7 @@ function createOptionPanel(block) {
     currentBlockCount--;
   }));
 
+  // 변환 적용 함수
   function applyTransform() {
     block.style.transform = `scale(${scale}) rotate(${angle}deg)`;
     if (block.classList.contains('parallelogram')) {
@@ -293,16 +310,17 @@ function createOptionPanel(block) {
 
   document.querySelector('.canvas').appendChild(panel);
 
+  // 옵션 패널 외부 클릭 시 제거
   window.addEventListener('click', (e) => {
-  // 옵션 패널이나 블록 내부를 클릭한 경우는 제외
-  if (
-    e.target.closest('.option-panel') ||
-    e.target.classList.contains('block')
-  ) return;
+    if (
+      e.target.closest('.option-panel') ||
+      e.target.classList.contains('block')
+    ) return;
 
-  remove_exist_option_panel();
+    remove_exist_option_panel();
   });
 }
+
 
 function remove_exist_option_panel() {
   const panel = document.querySelector('.option-panel');
