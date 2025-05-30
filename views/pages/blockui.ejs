@@ -13,7 +13,8 @@
       <button onclick="addShape('triangle large')">큰 삼각형</button>
       <button onclick="addShape('triangle small')">작은 삼각형</button>
       <button onclick="addShape('square')">정사각형</button>
-      <button onclick="addShape('parallelogram')">평행사변형</button>
+      <button onclick="addShape('circle')">원</button>
+      <button onclick="addShape('star')">별</button>  
     </div>
     <div class="main">
       <div class="header1">블록 배치하기</div>
@@ -89,47 +90,56 @@
   }
 
   function makeDraggableAndRotatable(block) {
-    let angle = 0;
-    let dragged = false;
+  let angle = 0;
+  let dragged = false;
+  let scaleOptions = [1, 1.5, 2, 2.5, 3, 3.5, 4, 0.5];
+  let scaleIndex = 0;
+  let scale = scaleOptions[scaleIndex];
 
-    block.addEventListener('click', (e) => {
-      e.stopPropagation();
+  // 회전 좌클릭
+  block.addEventListener('click', (e) => {
+    e.stopPropagation();
+    createOptionPanel(block);
+  });
 
-      if (dragged) return;
+  // 색상 변경 우클릭
+  block.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+});
 
-      angle = (angle + 45) % 360;
-      block.style.transform = `rotate(${angle}deg)`;
-      if (block.classList.contains('parallelogram')) {
-        block.style.transform += ' skew(-30deg)';
-      }
+  // 🎯 드래그 이동
+  block.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const shiftX = e.clientX - block.offsetLeft;
+    const shiftY = e.clientY - block.offsetTop;
+    dragged = false;
 
-      createDeleteButton(block);
-    });
+    function onMouseMove(e) {
+      block.style.left = `${e.clientX - shiftX}px`;
+      block.style.top = `${e.clientY - shiftY}px`;
+      dragged = true;
+    }
 
+    function onMouseUp() {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    }
 
-    block.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      const shiftX = e.clientX - block.offsetLeft;
-      const shiftY = e.clientY - block.offsetTop;
-      dragged = false;
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
 
-      function onMouseMove(e) {
-        block.style.left = `${e.clientX - shiftX}px`;
-        block.style.top = `${e.clientY - shiftY}px`;
-        dragged = true;
-      }
+  block.ondragstart = () => false;
 
-      function onMouseUp() {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-      }
-
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
-    });
-
-    block.ondragstart = () => false;
+  // 🔄 변환 적용 함수
+  function applyTransform() {
+    block.style.transform = `scale(${scale}) rotate(${angle}deg)`;
+    if (block.classList.contains('parallelogram')) {
+      block.style.transform += ' skew(-30deg)';
+    }
   }
+}
+
 
   function extractBlockData() {
   const blocks = document.querySelectorAll('.block');
@@ -137,6 +147,7 @@
     const style = window.getComputedStyle(block);
     const transform = style.transform;
     let rotation = 0;
+    let scale = 1;
 
     if (transform && transform !== 'none') {
       const values = transform.match(/matrix\(([^)]+)\)/);
@@ -144,9 +155,14 @@
         const parts = values[1].split(', ');
         const a = parseFloat(parts[0]);
         const b = parseFloat(parts[1]);
+        const d = parseFloat(parts[3]);
         rotation = Math.round(Math.atan2(b, a) * (180 / Math.PI));
+        scale = Math.sqrt(a * a + b * b); // scaleX 계산
       }
     }
+
+    const label = block.querySelector('span');
+    const tag = label ? label.textContent : '';
 
     return {
       shape_type: block.dataset.shape,
@@ -154,11 +170,14 @@
       x_pos: parseInt(block.style.left || 0),
       y_pos: parseInt(block.style.top || 0),
       rotation_degree: rotation,
+      scale: scale,
+      tag: tag,
       created_at: new Date().toISOString(),
       keyword_id: null
     };
   });
 }
+
 
 
   document.getElementById('saveBtn').addEventListener('click', async () => {
@@ -183,35 +202,115 @@
       alert("저장에 실패했습니다.");
     }
   });
+function createOptionPanel(block) {
+  remove_exist_option_panel();
 
-  document.addEventListener('click', () => {
-      remove_exist_delete_btn();
-  });
+  const panel = document.createElement('div');
+  panel.className = 'option-panel';
+  panel.style.position = 'absolute';
+  panel.style.left = `${block.offsetLeft + block.offsetWidth + 10}px`;
+  panel.style.top = `${block.offsetTop}px`;
+  panel.style.backgroundColor = '#fff';
+  panel.style.border = '1px solid #aaa';
+  panel.style.borderRadius = '8px';
+  panel.style.padding = '8px';
+  panel.style.display = 'flex';
+  panel.style.flexDirection = 'column';
+  panel.style.zIndex = 1000;
 
-  function createDeleteButton(targetBlock) {
-    remove_exist_delete_btn();
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.innerText = 'x';
-    deleteBtn.className = 'delete-btn';
-
-    deleteBtn.style.left = `${targetBlock.offsetLeft + targetBlock.offsetWidth - 10}px`;
-    deleteBtn.style.top = `${targetBlock.offsetTop - 10}px`;
-
-    deleteBtn.addEventListener('click', (e) => {
+  // 버튼 생성 함수
+  const createButton = (label, onClick) => {
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.style.marginBottom = '6px';
+    btn.style.fontSize = '12px';
+    btn.style.cursor = 'pointer';
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      targetBlock.remove();
-      deleteBtn.remove();
-      currentBlockCount--;
+      onClick();
     });
+    return btn;
+  };
 
-    document.querySelector('.canvas').appendChild(deleteBtn);
+  // 회전
+  let angle = 0;
+  panel.appendChild(createButton('🔁 회전', () => {
+    angle = (angle + 45) % 360;
+    applyTransform();
+  }));
+
+  // 크기
+  let scaleIndex = 0;
+  const scaleOptions = [1, 1.5, 2, 2.5, 3, 0.5];
+  let scale = scaleOptions[scaleIndex];
+  panel.appendChild(createButton('↔️ 크기', () => {
+    scaleIndex = (scaleIndex + 1) % scaleOptions.length;
+    scale = scaleOptions[scaleIndex];
+    applyTransform();
+  }));
+
+  // 색상
+  panel.appendChild(createButton('🎨 색상', () => {
+    const picker = document.createElement('input');
+    picker.type = 'color';
+    picker.style.position = 'absolute';
+    picker.style.zIndex = 2000;
+    document.body.appendChild(picker);
+    picker.click();
+    picker.addEventListener('input', () => {
+      block.style.backgroundColor = picker.value;
+      picker.remove();
+    });
+    picker.addEventListener('blur', () => picker.remove());
+  }));
+
+  // 태그
+  panel.appendChild(createButton('🔠 태그', () => {
+  const tag = prompt("태그를 입력하세요");
+  if (tag) {
+    let label = block.querySelector('span');
+    if (!label) {
+      label = document.createElement('span');
+      block.appendChild(label);
+    }
+    label.textContent = tag;
+  }
+}));
+
+  // 삭제
+  panel.appendChild(createButton('❌ 삭제', () => {
+    block.remove();
+    panel.remove();
+    currentBlockCount--;
+  }));
+
+  function applyTransform() {
+    block.style.transform = `scale(${scale}) rotate(${angle}deg)`;
+    if (block.classList.contains('parallelogram')) {
+      block.style.transform += ' skew(-30deg)';
+    }
   }
 
-  function remove_exist_delete_btn() {
-    const existBtn = document.querySelector('.delete-btn');
-    if (existBtn) existBtn.remove();
-  }
+  document.querySelector('.canvas').appendChild(panel);
+
+  window.addEventListener('click', (e) => {
+  // 옵션 패널이나 블록 내부를 클릭한 경우는 제외
+  if (
+    e.target.closest('.option-panel') ||
+    e.target.classList.contains('block')
+  ) return;
+
+  remove_exist_option_panel();
+  });
+}
+
+function remove_exist_option_panel() {
+  const panel = document.querySelector('.option-panel');
+  if (panel) panel.remove();
+}
+
+
+
 
 </script>
 

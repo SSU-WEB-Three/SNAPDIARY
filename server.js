@@ -227,6 +227,8 @@ app.post('/save-blocks', async (req, res) => {
         x_pos: block.x_pos,
         y_pos: block.y_pos,
         rotation_degree: block.rotation_degree,
+        scale: block.scale || 1,
+        tag: block.tag || '',
         user_id
       });
       const saved = await newBlock.save();

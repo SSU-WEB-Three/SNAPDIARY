@@ -8,6 +8,8 @@ const BlockSchema = new Schema({
   x_pos: { type: Number, required: true },
   y_pos: { type: Number, required: true },
   rotation_degree: { type: Number, default: 0 },
+  scale: { type: Number, default: 1 }, 
+  tag: { type: String, default: '' },
   user_id: { type: String, required: true },
   created_at: { type: Date, default: Date.now }
 });
