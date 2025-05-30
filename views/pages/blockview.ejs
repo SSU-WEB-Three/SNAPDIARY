@@ -5,30 +5,39 @@
   <title><%= map.user_id?.usernickname || '익명' %>님의 블록맵</title>
   <link rel="stylesheet" href="/css/blockview.css">
   <style>
-   
+    body {
+      font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      background: #f9f9f9;
+      padding: 40px 20px;
+      margin: 0;
+    }
+
     h1 {
-      font-size: 1.8rem;
-      color: #2c3e50;
+      font-size: 2rem;
+      text-align: center;
       margin-bottom: 10px;
     }
 
     p.date {
       color: #888;
       font-size: 0.95rem;
+      text-align: center;
       margin-bottom: 30px;
     }
 
-
     .readonly-canvas {
-      justify-content: flex-start;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       width: 400px;
       height: 400px;
       background-color: #ffffff;
       border: 1px solid #ccc;
       position: relative;
-      margin: 0 auto;
+      margin: 0 auto 40px;
       border-radius: 8px;
       overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
     .block {
@@ -58,12 +67,55 @@
       width: 120px;
       height: 60px;
     }
+
+    .diary-section {
+      max-width: 600px;
+      margin: 0 auto 40px;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .diary-section h2 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+
+    .diary-text {
+      font-size: 1.1rem;
+      line-height: 1.7;
+      color: #444;
+      white-space: pre-line;
+    }
+
+    .diary-image {
+      margin-top: 25px;
+      max-width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
-  <h1><%= map.user_id?.usernickname || '익명' %>님의 <%= new Date(map.created_at).toLocaleDateString('ko-KR') %> 블록맵</h1>
+
+  <h1><%= map.user_id?.usernickname || '익명' %>님의 <%= new Date(map.created_at).toLocaleDateString('ko-KR') %> 기억의 조각들</h1>
   <p class="date"><%= new Date(map.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) %></p>
 
+  <% if (map.diary && map.diary.title) { %>
+    <section class="diary-section">
+      <h2>오늘의 일기</h2>
+      <p class="diary-text"><%= map.diary.title %></p>
+      <% if (map.diary.imageUrl) { %>
+        <img src="<%= map.diary.imageUrl %>" alt="AI 생성 이미지" class="diary-image" />
+      <% } %>
+    </section>
+  <% } %>
+
+     <section class="diary-section">
+      <h2 style="font-size: 1.5rem; margin-bottom: 20px; color: #2c3e50; text-align: center;">블록 배치표</h2>
   <div id="canvas" class="readonly-canvas">
     <% map.block_id.forEach(block => {
          const size = block.shape_type.includes('large') ? 160
@@ -83,5 +135,7 @@
       </div>
     <% }) %>
   </div>
+  </section>
+
 </body>
 </html>

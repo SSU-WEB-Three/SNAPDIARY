@@ -15,7 +15,8 @@ const Block = require('./models/Block');
 const BlockMap = require('./models/BlockMap');
 const ChatLog = require('./models/ChatLog');
 const cron = require('node-cron');
-
+const fs = require('fs');
+const axios = require('axios');
 
 connectDB();
 const app = express();
@@ -351,11 +352,11 @@ app.get('/api/chatlog/:user_id/:date', async (req, res) => {
   const { user_id, date } = req.params;
 
   try {
-    const start = new Date(new Date(date).setHours(0, 0, 0, 0) - (9 * 60 * 60 * 1000));
-    const end = new Date(new Date(date).setHours(23, 59, 59, 999) - (9 * 60 * 60 * 1000));
+    const start = new Date(`${date}T00:00:00+09:00`);
+    const end = new Date(`${date}T23:59:59.999+09:00`);
 
     const logs = await ChatLog.find({
-      user_id,
+      user_id: new mongoose.Types.ObjectId(user_id),
       timestamp: { $gte: start, $lte: end }
     }).sort({ timestamp: 1 });
 
@@ -398,16 +399,29 @@ app.get('/blockview/:mapId', async (req, res) => {
 
     if (!map) return res.status(404).send('맵이 존재하지 않음');
 
+    // 오늘 날짜 추출 (블록맵 생성일 기준)
+    const dateStr = new Date(map.created_at).toISOString().slice(0, 10);
+
+    // 해당 날짜의 일기 조회
+    const diary = await DiaryEntry.findOne({
+      user_id: map.user_id._id,
+      date: dateStr
+    });
+
     res.render('pages/blockview', {
-  title: '블록맵 조회',
-  user: req.session.user || null,
-  map
-});
+      title: '블록맵 조회',
+      user: req.session.user || null,
+      map: {
+        ...map.toObject(),
+        diary
+      }
+    });
   } catch (err) {
     console.error('블록맵 조회 오류:', err);
     res.status(500).send('서버 오류');
   }
 });
+
 
 // 커뮤니티 페이지 (6개씩 페이징)
 
@@ -434,7 +448,8 @@ app.get('/community', async (req, res) => {
       return {
         ...map.toObject(),  // map의 기본 정보
         keywords: keywords.map(k => k.keyword),
-        diary: diary ? diary.title : null
+        diary: diary ? diary.title : null,
+        imageUrl: diary?.imageUrl || null 
       };
     })
   );
@@ -451,38 +466,77 @@ app.get('/community', async (req, res) => {
 const path = require('path');
 const multer = require('multer');
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'public/uploads/');
-  },
-  filename: function (req, file, cb) {
+const profileStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'public/uploads/profile'),
+  filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const filename = `${Date.now()}-${file.originalname}`;
-    cb(null, filename);
+    cb(null, `${Date.now()}-${file.originalname}`);
   }
 });
-const upload = multer({ storage });
+const uploadProfile = multer({ storage: profileStorage });
 
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
-app.post('/api/upload-profile/:user_id', upload.single('profileImage'), async (req, res) => {
-  const userId = req.params.user_id;
-  if (!req.file) return res.status(400).json({ error: '파일 없음' });
+app.post('/api/generate-image', async (req, res) => {
+  const { user_id, date } = req.body;
 
-  const imagePath = `/uploads/${req.file.filename}`;
+  if (!user_id || !date) {
+    return res.status(400).json({ error: "user_id 또는 date 누락" });
+  }
 
   try {
-    await Account.findByIdAndUpdate(userId, { profileImage: imagePath });
-    res.json({ url: imagePath });
+    // 1. 프롬프트 구성
+    const prompt = `
+감성적이고 평화로운 하루를 일러스트 스타일로 그려주세요.
+배경은 따뜻하고 편안한 분위기면 좋겠습니다.
+(사용자의 대화 내용이나 키워드를 기반으로 구체화해도 됩니다.)
+`;
+
+    // 2. OpenAI 이미지 생성
+    const imageResponse = await openai.images.generate({
+      model: "dall-e-3",
+      prompt,
+      size: "1024x1024",
+      n: 1,
+    });
+
+    const imageUrl = imageResponse.data[0].url;
+    const fileName = `${user_id}_${date}.png`;
+    const dirPath = path.join(__dirname, 'public', 'uploads', 'generated');
+    const savePath = path.join(dirPath, fileName);
+
+    // 3. 디렉토리 없으면 생성
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+
+    // 4. 이미지 다운로드 및 저장
+    const response = await axios.get(imageUrl, { responseType: 'stream' });
+    const writer = fs.createWriteStream(savePath);
+    response.data.pipe(writer);
+
+    await new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+
+    // 5. DB 업데이트
+    const localPath = `/uploads/generated/${fileName}`;
+    await DiaryEntry.updateOne(
+      { user_id, date },
+      { $set: { imageUrl: localPath } },
+      { upsert: true }
+    );
+
+    console.log("이미지 생성 완료:", localPath);
+    return res.json({ imageUrl: localPath });
   } catch (err) {
-    console.error("프로필 업데이트 실패:", err);
-    res.status(500).json({ error: '서버 오류' });
+    console.error("이미지 생성 실패:", err.message);
+    return res.status(500).json({ error: "이미지 생성 실패" });
   }
 });
 
-
 // 매일 밤 11시에 실행
-cron.schedule('0 23 * * *', async () => {
+cron.schedule('00 23 * * *', async () => {
   console.log("23:00 자동 일기 생성 시작");
 
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
@@ -541,21 +595,22 @@ ${combinedMessages}
       const diaryText = completion.choices[0].message.content.trim();
 
       if (existingDiary) {
-        // 기존 일기 문서가 있지만 title이 없는 경우 → 업데이트
-        existingDiary.title = diaryText;
-        existingDiary.generated = true;
-        await existingDiary.save();
-        console.log(`${userId}님: 기존 일기 title 채움`);
-      } else {
-        // 일기가 전혀 없으면 새로 생성
-        await DiaryEntry.create({
-          user_id: userId,
-          date: today,
-          title: diaryText,
-          generated: true
-        });
-        console.log(`${userId}님: 새 일기 생성`);
-      }
+  existingDiary.title = diaryText;
+  existingDiary.generated = true;
+  await existingDiary.save();
+  console.log(`${userId}님: 기존 일기 title 채움`);
+  await generateImage(userId, today);
+} else {
+  await DiaryEntry.create({
+    user_id: userId,
+    date: today,
+    title: diaryText,
+    generated: true
+  });
+  console.log(`${userId}님: 새 일기 생성`);
+  await generateImage(userId, today); 
+}
+
     }
 
     console.log("자동 일기 처리 완료");
@@ -563,3 +618,5 @@ ${combinedMessages}
     console.error("자동 일기 생성 오류:", err.message);
   }
 });
+
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));

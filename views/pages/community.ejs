@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <title><%= title %></title>
   <style>
- 
-
     h1 {
       text-align: center;
       color: #333;
@@ -16,6 +14,7 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 24px;
       margin-top: 30px;
+      padding: 0 20px;
     }
 
     article {
@@ -28,6 +27,13 @@
 
     article:hover {
       transform: translateY(-4px);
+    }
+
+    .thumb {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin-bottom: 12px;
     }
 
     .btn {
@@ -82,24 +88,19 @@
       <% entries.forEach(entry => { %>
         <article>
           <p><strong>키워드:</strong>
-            <% if (entry.keywords.length > 0) { %>
+            <% if (entry.keywords && entry.keywords.length > 0) { %>
               <%= entry.keywords.map(k => '#' + k).join(' ') %>
             <% } else { %>
               <em>등록된 키워드 없음</em>
             <% } %>
-          </p>  
-          <p><strong>작성자:</strong> <%= entry.user_id?.usernickname || '익명' %></p>
-          <p><strong>날짜:</strong> <%= entry.date || entry.created_at?.toISOString().slice(0, 10) %></p>
-          <p><strong>일기:</strong>
-            <% if (entry.diary) { %>
-              <%= entry.diary %>
-            <% } else { %>
-              <em>아직 일기가 생성되지 않았어요.</em>
-            <% } %>
           </p>
+          <div></div>
+         <img src="<%= entry.imageUrl %>" alt="일기 이미지" class="thumb"/>
+          <p><strong>날짜:</strong> <%= entry.date || entry.created_at?.toISOString().slice(0, 10) %></p>
+          <p><strong>작성자:</strong> <%= entry.user_id?.usernickname || '익명' %></p>
           <a href="/blockview/<%= entry.map_id %>" class="btn">자세히 보기</a>
         </article>
-      <% }); %>
+      <% }) %>
     </section>
 
     <nav aria-label="페이지 이동">
