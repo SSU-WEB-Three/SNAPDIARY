@@ -122,6 +122,44 @@ app.post('/api/diary/save', async (req, res) => {
   res.send('저장 완료');
 });
 
+app.post('/api/check-abuse', async (req, res) => {
+  const { text } = req.body;
+
+  if (!text || text.trim().length === 0) {
+    return res.status(400).json({ error: '입력된 문장이 없습니다.' });
+  }
+
+  try {
+    const prompt = `
+너는 욕설 필터링 시스템이야. 아래 문장이 다음 조건 중 하나라도 해당되면 "부적절함"이라고 대답해줘:
+
+1. 욕설 또는 공격적인 표현이 포함되어 있음
+2. 비하, 차별, 모욕적 표현이 포함되어 있음
+3. 무의미하거나 랜덤한 글자 나열임 (예: asdads, qweqwe, fffds)
+4. 대화로 보기 어려운 이상한 형태임
+
+그 외에는 "적절함"이라고 대답해.
+
+문장: "${text}"
+
+반드시 "적절함" 또는 "부적절함" 중 하나로만 대답해.
+`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 10,
+      temperature: 0.2,
+    });
+
+    const result = completion.choices[0].message.content.trim();
+    res.json({ result });
+  } catch (err) {
+    console.error('입력 검증 실패:', err.message);
+    res.status(500).json({ error: 'OpenAI 오류' });
+  }
+});
+
 app.post('/api/generate-diary', async (req, res) => {
   const { messages } = req.body;
 
