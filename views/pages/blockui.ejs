@@ -122,13 +122,17 @@
   // 🎯 드래그 이동
   block.addEventListener('mousedown', (e) => {
     e.preventDefault();
-    const shiftX = e.clientX - block.offsetLeft;
-    const shiftY = e.clientY - block.offsetTop;
+    
+    const canvasRect = document.querySelector('.canvas').getBoundingClientRect();
+    const blockRect = block.getBoundingClientRect();
+
+    const shiftX = e.clientX - blockRect.left;
+    const shiftY = e.clientY - blockRect.top;
     dragged = false;
 
     function onMouseMove(e) {
-      block.style.left = `${e.clientX - shiftX}px`;
-      block.style.top = `${e.clientY - shiftY}px`;
+      block.style.left = `${e.clientX - canvasRect.left - shiftX}px`;
+      block.style.top = `${e.clientY - canvasRect.top - shiftY}px`;
       dragged = true;
     }
 
