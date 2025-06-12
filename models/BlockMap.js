@@ -6,8 +6,11 @@ const BlockMapSchema = new mongoose.Schema({
   block_id: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Block' }],
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'account' },
   date: { type: String, required: true },
-  created_at: { type: Date, default: Date.now }
+  created_at: { type: Date, default: Date.now },
+  thumbnailUrl: { type: String, default: '' }
 });
 
 
 module.exports = mongoose.model('BlockMap', BlockMapSchema);
+
+
